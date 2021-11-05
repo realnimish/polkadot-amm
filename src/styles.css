@@ -1,0 +1,339 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+        monospace;
+}
+
+html,
+body,
+.pageBody,
+#root {
+    height: 100%;
+    background: linear-gradient(180deg, #242525 0%, #000 180%);
+}
+
+.tabBody {
+    margin: 0px auto;
+    width: 500px;
+    padding-top: 5px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0px 0px 19px 19px;
+    background-color: #0e0e10;
+    border-top: 0px;
+    margin-right: 0px;
+}
+
+.bottomDiv {
+    margin: 10px auto;
+    width: 30%;
+    padding: 5px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 19px;
+}
+.boxStyle {
+    width: 70%;
+    height: auto;
+    display: flex;
+    justify-content: flex-start;
+    margin: 1px auto;
+    flex-direction: row;
+    border-radius: 19px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid grey;
+}
+.leftHeader {
+    font-size: 14px;
+}
+
+.getMax {
+    background-color: #242525;
+    border: 1px solid white;
+    border-radius: 19px;
+    height: 30px;
+    width: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.getMax:hover {
+    background-color: #b4b4b4;
+    border: 2px;
+}
+
+.boxTemplate {
+    width: 75%;
+    height: auto;
+    display: flex;
+    margin: 50px auto;
+    padding: 0px 40px 20px 40px;
+    flex-direction: column;
+    border-radius: 19px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid grey;
+}
+.boxStyle2 {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid grey;
+}
+.selectTab {
+    width: 460px;
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    margin: 0px auto;
+    margin-top: 10px;
+    margin-right: 0px;
+    background-color: #0e0e10;
+    border-radius: 19px 19px 0px 0px;
+    padding: 0px 20px 0px 20px;
+}
+.myStyle1 {
+    margin: 10px 30px;
+    width: 30%;
+    padding: 5px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 19px;
+}
+
+.btn {
+    background-color: #242525;
+    margin: 10px 30px;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    width: 100px;
+    height: 40px;
+    border-radius: 9px;
+    cursor: pointer;
+}
+
+.textField {
+    width: 70%;
+    height: 30px;
+    font-size: 22px;
+    background-color: #0e0e10;
+    color: white;
+    border: 0px;
+}
+.textField:focus-visible {
+    outline: none;
+}
+
+.boxBody {
+    display: flex;
+    justify-content: space-between;
+    color: white;
+}
+.rightContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 20px;
+    font-weight: 700;
+}
+.center {
+    text-align: center;
+}
+
+.tabStyle {
+    text-align: center;
+    width: 80px;
+    padding: 5px;
+    font: 18px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    margin-top: 15px;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+.tabStyle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.swapIcon {
+    width: 5%;
+    text-align: center;
+    display: flex;
+    margin: 40px auto;
+    color: #ff726e;
+}
+
+svg {
+    height: 50px;
+    width: 50px;
+}
+
+.connectBtn {
+    position: absolute;
+    right: 50px;
+    top: 20px;
+    background-color: #ff726e;
+    color: #0e0e10;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid #c8332e;
+    border-radius: 15px;
+}
+
+.connectBtn:hover {
+    color: white;
+    border: 2px solid #c8332e;
+}
+
+.connected {
+    position: absolute;
+    right: 50px;
+    top: 20px;
+    background-color: #4caf50;
+    color: white;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid #2a722c;
+    border-radius: 15px;
+}
+
+.details {
+    padding: 15px 10px 15px 0px;
+    width: 370px;
+    height: fit-content;
+    position: absolute;
+    right: 0px;
+    display: flex;
+    justify-content: center;
+}
+
+.withdrawEstimate {
+    height: 30px;
+    width: 75%;
+    margin: 10px auto;
+    color: white;
+}
+
+.detailsBody {
+    background-color: #0e0e10;
+    width: 90%;
+    padding: 10px;
+    border-radius: 19px;
+}
+
+.detailsHeader {
+    height: 30px;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    margin-bottom: 15px;
+}
+
+.detailsRow {
+    padding: 0px 25px;
+    height: 35px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.detailsAttribute {
+    font: 18px;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    justify-content: flex-start;
+    width: 50%;
+}
+
+.detailsValue {
+    font: 18px;
+    font-weight: 900;
+    color: white;
+    display: flex;
+    justify-content: center;
+    width: 50%;
+}
+
+.centerBody {
+    display: flex;
+    justify-content: center;
+    height: 100%;
+}
+
+.navBar {
+    height: 80px;
+    background-color: #0e0e10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    padding: 0px 30px;
+}
+
+.appName {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.error {
+    color: white;
+    display: flex;
+    justify-content: flex-start;
+    padding: 0px 20px;
+}
+
+@media only screen and (max-width: 1100px) {
+    .centerBody {
+        display: block;
+    }
+    .selectTab {
+        margin: 0px auto;
+        margin-top: 10px;
+    }
+    .tabBody {
+        margin: 0px auto;
+    }
+    .details {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    .detailsBody {
+        width: 500px;
+    }
+    .navBar {
+        justify-content: flex-start;
+    }
+}
