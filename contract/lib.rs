@@ -204,10 +204,17 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn swapToken1(&mut self, _amountToken1: Balance) -> Result<Balance, &'static str> {
+        pub fn swapToken1(
+            &mut self,
+            _amountToken1: Balance,
+            _minToken2: Balance,
+        ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token1Balance, _amountToken1)?;
             let amountToken2 = self.getSwapToken1Estimate(_amountToken1)?;
+            if amountToken2 < _minToken2 {
+                return Err("Slippage tolerance exceeded");
+            }
             self.token1Balance
                 .entry(caller)
                 .and_modify(|val| *val -= _amountToken1);
@@ -217,6 +224,30 @@ mod amm {
                 .entry(caller)
                 .and_modify(|val| *val += amountToken2);
             Ok(amountToken2)
+        }
+
+        #[ink(message)]
+        pub fn swapToken1GivenToken2(
+            &mut self,
+            _amountToken2: Balance,
+            _maxToken1: Balance,
+        ) -> Result<Balance, &'static str> {
+            let caller = self.env().caller();
+            let amountToken1 = self.getSwapToken1EstimateGivenToken2(_amountToken2)?;
+            if amountToken1 > _maxToken1 {
+                return Err("Slippage tolerance exceeded");
+            }
+
+            self.validAmountCheck(&self.token1Balance, amountToken1)?;
+            self.token1Balance
+                .entry(caller)
+                .and_modify(|val| *val -= amountToken1);
+            self.totalToken1 += amountToken1;
+            self.totalToken2 -= _amountToken2;
+            self.token2Balance
+                .entry(caller)
+                .and_modify(|val| *val += _amountToken2);
+            Ok(amountToken1)
         }
 
         #[ink(message)]
@@ -251,10 +282,17 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn swapToken2(&mut self, _amountToken2: Balance) -> Result<Balance, &'static str> {
+        pub fn swapToken2(
+            &mut self,
+            _amountToken2: Balance,
+            _minToken1: Balance,
+        ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token2Balance, _amountToken2)?;
             let amountToken1 = self.getSwapToken2Estimate(_amountToken2)?;
+            if amountToken1 < _minToken1 {
+                return Err("Slippage tolerance exceeded");
+            }
             self.token2Balance
                 .entry(caller)
                 .and_modify(|val| *val -= _amountToken2);
@@ -264,6 +302,30 @@ mod amm {
                 .entry(caller)
                 .and_modify(|val| *val += amountToken1);
             Ok(amountToken1)
+        }
+
+        #[ink(message)]
+        pub fn swapToken2GivenToken1(
+            &mut self,
+            _amountToken1: Balance,
+            _maxToken2: Balance,
+        ) -> Result<Balance, &'static str> {
+            let caller = self.env().caller();
+            let amountToken2 = self.getSwapToken2EstimateGivenToken1(_amountToken1)?;
+            if amountToken2 > _maxToken2 {
+                return Err("Slippage tolerance exceeded");
+            }
+
+            self.validAmountCheck(&self.token2Balance, amountToken2)?;
+            self.token2Balance
+                .entry(caller)
+                .and_modify(|val| *val -= amountToken2);
+            self.totalToken2 += amountToken2;
+            self.totalToken1 -= _amountToken1;
+            self.token1Balance
+                .entry(caller)
+                .and_modify(|val| *val += _amountToken1);
+            Ok(amountToken2)
         }
     }
 
@@ -319,8 +381,19 @@ mod amm {
             let mut contract = Amm::new();
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
-            let amountToken2 = contract.swapToken1(50).unwrap();
+            let amountToken2 = contract.swapToken1(50, 50).unwrap();
             assert_eq!(amountToken2, 50);
+            assert_eq!(contract.getMyHoldings(), (0, 150, share));
+            assert_eq!(contract.getPoolDetails(), (100, 50, share));
+        }
+
+        #[ink::test]
+        fn slippage_works() {
+            let mut contract = Amm::new();
+            contract.faucet(100, 200);
+            let share = contract.provide(50, 100).unwrap();
+            let amountToken2 = contract.swapToken1(50, 51);
+            assert_eq!(amountToken2, Err("Slippage tolerance exceeded"));
             assert_eq!(contract.getMyHoldings(), (0, 150, share));
             assert_eq!(contract.getPoolDetails(), (100, 50, share));
         }
