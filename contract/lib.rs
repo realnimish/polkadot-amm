@@ -21,32 +21,6 @@ mod amm {
         token2Balance: HashMap<AccountId, Balance>,
     }
 
-    #[ink(event)]
-    pub struct Provide {
-        #[ink(topic)]
-        account: AccountId,
-        token1: Balance,
-        token2: Balance,
-        result: Result<Balance, String>,
-    }
-
-    #[ink(event)]
-    pub struct Withdraw {
-        #[ink(topic)]
-        account: AccountId,
-        share: Balance,
-        result: Result<(Balance, Balance), String>,
-    }
-
-    #[ink(event)]
-    pub struct Swap {
-        #[ink(topic)]
-        account: AccountId,
-        from: String,
-        to: String,
-        result: Result<(Balance, Balance), String>,
-    }
-
     impl Amm {
         #[ink(constructor)]
         pub fn new() -> Self {
@@ -123,24 +97,8 @@ mod amm {
             _amountToken1: Balance,
             _amountToken2: Balance,
         ) -> Result<Balance, &'static str> {
-            let caller = self.env().caller();
-            let mut Res = Provide {
-                account: caller,
-                token1: _amountToken1,
-                token2: _amountToken2,
-                result: Err(String::new()),
-            };
-            if let Err(msg) = self.validAmountCheck(&self.token1Balance, _amountToken1) {
-                Res.result = Err(msg.to_string());
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
-
-            if let Err(msg) = self.validAmountCheck(&self.token2Balance, _amountToken2) {
-                Res.result = Err(msg.to_string());
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
+            self.validAmountCheck(&self.token1Balance, _amountToken1)?;
+            self.validAmountCheck(&self.token2Balance, _amountToken2)?;
 
             let share;
             if self.totalShares == 0 {
@@ -150,8 +108,6 @@ mod amm {
                 let share2 = self.totalShares * _amountToken2 / self.totalToken2;
 
                 if share1 != share2 {
-                    Res.result = Err(String::from("Equivalent value of tokens not provided..."));
-                    self.env().emit_event(Res);
                     return Err("Equivalent value of tokens not provided...");
                 }
                 share = share1;
@@ -161,6 +117,7 @@ mod amm {
                 return Err("Asset value less than threshold for contribution!");
             }
 
+            let caller = self.env().caller();
             let token1 = *self.token1Balance.get(&caller).unwrap();
             let token2 = *self.token2Balance.get(&caller).unwrap();
             self.token1Balance.insert(caller, token1 - _amountToken1);
@@ -175,8 +132,6 @@ mod amm {
                 .and_modify(|val| *val += share)
                 .or_insert(share);
 
-            Res.result = Ok(share);
-            self.env().emit_event(Res);
             Ok(share)
         }
 
@@ -198,25 +153,9 @@ mod amm {
         #[ink(message)]
         pub fn withdraw(&mut self, _share: Balance) -> Result<(Balance, Balance), &'static str> {
             let caller = self.env().caller();
-            let mut Res = Withdraw {
-                account: caller,
-                share: _share,
-                result: Err(String::new()),
-            };
-            if let Err(msg) = self.validAmountCheck(&self.shares, _share) {
-                Res.result = Err(String::from(msg));
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
+            self.validAmountCheck(&self.shares, _share)?;
 
-            let (amountToken1, amountToken2) = match self.getWithdrawEstimate(_share) {
-                Err(msg) => {
-                    Res.result = Err(String::from(msg));
-                    self.env().emit_event(Res);
-                    return Err(msg);
-                }
-                Ok((x, y)) => (x, y),
-            };
+            let (amountToken1, amountToken2) = self.getWithdrawEstimate(_share)?;
             self.shares.entry(caller).and_modify(|val| *val -= _share);
             self.totalShares -= _share;
 
@@ -230,8 +169,6 @@ mod amm {
                 .entry(caller)
                 .and_modify(|val| *val += amountToken2);
 
-            Res.result = Ok((amountToken1, amountToken2));
-            self.env().emit_event(Res);
             Ok((amountToken1, amountToken2))
         }
 
@@ -273,28 +210,9 @@ mod amm {
             _minToken2: Balance,
         ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
-            let mut Res = Swap {
-                account: caller,
-                from: String::from("Token1"),
-                to: String::from("Token2"),
-                result: Err(String::new()),
-            };
-            if let Err(msg) = self.validAmountCheck(&self.token1Balance, _amountToken1) {
-                Res.result = Err(String::from(msg));
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
-            let amountToken2 = match self.getSwapToken1Estimate(_amountToken1) {
-                Err(msg) => {
-                    Res.result = Err(String::from(msg));
-                    self.env().emit_event(Res);
-                    return Err(msg);
-                }
-                Ok(x) => x,
-            };
+            self.validAmountCheck(&self.token1Balance, _amountToken1)?;
+            let amountToken2 = self.getSwapToken1Estimate(_amountToken1)?;
             if amountToken2 < _minToken2 {
-                Res.result = Err(String::from("Slippage tolerance exceeded"));
-                self.env().emit_event(Res);
                 return Err("Slippage tolerance exceeded");
             }
             self.token1Balance
@@ -305,9 +223,6 @@ mod amm {
             self.token2Balance
                 .entry(caller)
                 .and_modify(|val| *val += amountToken2);
-
-            Res.result = Ok((_amountToken1, amountToken2));
-            self.env().emit_event(Res);
             Ok(amountToken2)
         }
 
@@ -318,31 +233,12 @@ mod amm {
             _maxToken1: Balance,
         ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
-            let mut Res = Swap {
-                account: caller,
-                from: String::from("Token1"),
-                to: String::from("Token2"),
-                result: Err(String::new()),
-            };
-            let amountToken1 = match self.getSwapToken1EstimateGivenToken2(_amountToken2) {
-                Err(msg) => {
-                    Res.result = Err(String::from(msg));
-                    self.env().emit_event(Res);
-                    return Err(msg);
-                }
-                Ok(x) => x,
-            };
+            let amountToken1 = self.getSwapToken1EstimateGivenToken2(_amountToken2)?;
             if amountToken1 > _maxToken1 {
-                Res.result = Err(String::from("Slippage tolerance exceeded"));
-                self.env().emit_event(Res);
                 return Err("Slippage tolerance exceeded");
             }
 
-            if let Err(msg) = self.validAmountCheck(&self.token1Balance, amountToken1) {
-                Res.result = Err(String::from(msg));
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
+            self.validAmountCheck(&self.token1Balance, amountToken1)?;
             self.token1Balance
                 .entry(caller)
                 .and_modify(|val| *val -= amountToken1);
@@ -351,9 +247,6 @@ mod amm {
             self.token2Balance
                 .entry(caller)
                 .and_modify(|val| *val += _amountToken2);
-
-            Res.result = Ok((amountToken1, _amountToken2));
-            self.env().emit_event(Res);
             Ok(amountToken1)
         }
 
@@ -395,28 +288,9 @@ mod amm {
             _minToken1: Balance,
         ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
-            let mut Res = Swap {
-                account: caller,
-                from: String::from("Token2"),
-                to: String::from("Token1"),
-                result: Err(String::new()),
-            };
-            if let Err(msg) = self.validAmountCheck(&self.token2Balance, _amountToken2) {
-                Res.result = Err(String::from(msg));
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
-            let amountToken1 = match self.getSwapToken2Estimate(_amountToken2) {
-                Err(msg) => {
-                    Res.result = Err(String::from(msg));
-                    self.env().emit_event(Res);
-                    return Err(msg);
-                }
-                Ok(x) => x,
-            };
+            self.validAmountCheck(&self.token2Balance, _amountToken2)?;
+            let amountToken1 = self.getSwapToken2Estimate(_amountToken2)?;
             if amountToken1 < _minToken1 {
-                Res.result = Err(String::from("Slippage tolerance exceeded"));
-                self.env().emit_event(Res);
                 return Err("Slippage tolerance exceeded");
             }
             self.token2Balance
@@ -427,9 +301,6 @@ mod amm {
             self.token1Balance
                 .entry(caller)
                 .and_modify(|val| *val += amountToken1);
-
-            Res.result = Ok((_amountToken2, amountToken1));
-            self.env().emit_event(Res);
             Ok(amountToken1)
         }
 
@@ -440,31 +311,12 @@ mod amm {
             _maxToken2: Balance,
         ) -> Result<Balance, &'static str> {
             let caller = self.env().caller();
-            let mut Res = Swap {
-                account: caller,
-                from: String::from("Token2"),
-                to: String::from("Token1"),
-                result: Err(String::new()),
-            };
-            let amountToken2 = match self.getSwapToken2EstimateGivenToken1(_amountToken1) {
-                Err(msg) => {
-                    Res.result = Err(String::from(msg));
-                    self.env().emit_event(Res);
-                    return Err(msg);
-                }
-                Ok(x) => x,
-            };
+            let amountToken2 = self.getSwapToken2EstimateGivenToken1(_amountToken1)?;
             if amountToken2 > _maxToken2 {
-                Res.result = Err(String::from("Slippage tolerance exceeded"));
-                self.env().emit_event(Res);
                 return Err("Slippage tolerance exceeded");
             }
 
-            if let Err(msg) = self.validAmountCheck(&self.token2Balance, amountToken2) {
-                Res.result = Err(String::from(msg));
-                self.env().emit_event(Res);
-                return Err(msg);
-            }
+            self.validAmountCheck(&self.token2Balance, amountToken2)?;
             self.token2Balance
                 .entry(caller)
                 .and_modify(|val| *val -= amountToken2);
@@ -473,9 +325,6 @@ mod amm {
             self.token1Balance
                 .entry(caller)
                 .and_modify(|val| *val += _amountToken1);
-
-            Res.result = Ok((amountToken2, _amountToken1));
-            self.env().emit_event(Res);
             Ok(amountToken2)
         }
     }
