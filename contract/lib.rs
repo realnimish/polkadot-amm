@@ -9,6 +9,27 @@ const PRECISION: u128 = 1_000_000;
 mod amm {
     use ink_storage::collections::HashMap;
 
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum Error {
+        /// Zero Liquidity
+        ZeroLiquidity,
+        /// Amount cannot be zero!
+        ZeroAmount,
+        /// Insufficient amount
+        InsufficientAmount,
+        /// Equivalent value of tokens not provided
+        NonEquivalentValue,
+        /// Asset value less than threshold for contribution!
+        ThresholdNotReached,
+        /// Share should be less than totalShare
+        InvalidShare,
+        /// Insufficient pool balance
+        InsufficientLiquidity,
+        /// Slippage tolerance exceeded
+        SlippageExceeded,
+    }
+
     #[derive(Default)]
     #[ink(storage)]
     pub struct Amm {
@@ -51,9 +72,9 @@ mod amm {
             (self.totalToken1, self.totalToken2, self.totalShares)
         }
 
-        fn activePool(&self) -> Result<(), &'static str> {
+        fn activePool(&self) -> Result<(), Error> {
             match self.K {
-                0 => Err("Zero Liquidity"),
+                0 => Err(Error::ZeroLiquidity),
                 _ => Ok(()),
             }
         }
@@ -62,7 +83,7 @@ mod amm {
         pub fn getEquivalentToken1Estimate(
             &self,
             _amountToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             Ok(self.totalToken1 * _amountToken2 / self.totalToken2)
         }
@@ -71,7 +92,7 @@ mod amm {
         pub fn getEquivalentToken2Estimate(
             &self,
             _amountToken1: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             Ok(self.totalToken2 * _amountToken1 / self.totalToken1)
         }
@@ -80,13 +101,13 @@ mod amm {
             &self,
             _balance: &HashMap<AccountId, Balance>,
             _qty: Balance,
-        ) -> Result<(), &'static str> {
+        ) -> Result<(), Error> {
             let caller = self.env().caller();
             let my_balance = *_balance.get(&caller).unwrap_or(&0);
 
             match _qty {
-                0 => Err("Amount cannot be zero!"),
-                _ if _qty > my_balance => Err("Insufficient amount"),
+                0 => Err(Error::ZeroAmount),
+                _ if _qty > my_balance => Err(Error::InsufficientAmount),
                 _ => Ok(()),
             }
         }
@@ -96,7 +117,7 @@ mod amm {
             &mut self,
             _amountToken1: Balance,
             _amountToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             self.validAmountCheck(&self.token1Balance, _amountToken1)?;
             self.validAmountCheck(&self.token2Balance, _amountToken2)?;
 
@@ -108,13 +129,13 @@ mod amm {
                 let share2 = self.totalShares * _amountToken2 / self.totalToken2;
 
                 if share1 != share2 {
-                    return Err("Equivalent value of tokens not provided...");
+                    return Err(Error::NonEquivalentValue);
                 }
                 share = share1;
             }
 
             if share == 0 {
-                return Err("Asset value less than threshold for contribution!");
+                return Err(Error::ThresholdNotReached);
             }
 
             let caller = self.env().caller();
@@ -136,13 +157,10 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn getWithdrawEstimate(
-            &self,
-            _share: Balance,
-        ) -> Result<(Balance, Balance), &'static str> {
+        pub fn getWithdrawEstimate(&self, _share: Balance) -> Result<(Balance, Balance), Error> {
             self.activePool()?;
             if _share > self.totalShares {
-                return Err("Share should be less than totalShare");
+                return Err(Error::InvalidShare);
             }
 
             let amountToken1 = _share * self.totalToken1 / self.totalShares;
@@ -151,7 +169,7 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn withdraw(&mut self, _share: Balance) -> Result<(Balance, Balance), &'static str> {
+        pub fn withdraw(&mut self, _share: Balance) -> Result<(Balance, Balance), Error> {
             let caller = self.env().caller();
             self.validAmountCheck(&self.shares, _share)?;
 
@@ -173,10 +191,7 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn getSwapToken1Estimate(
-            &self,
-            _amountToken1: Balance,
-        ) -> Result<Balance, &'static str> {
+        pub fn getSwapToken1Estimate(&self, _amountToken1: Balance) -> Result<Balance, Error> {
             self.activePool()?;
             let token1After = self.totalToken1 + _amountToken1;
             let token2After = self.K / token1After;
@@ -191,10 +206,10 @@ mod amm {
         pub fn getSwapToken1EstimateGivenToken2(
             &self,
             _amountToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             if _amountToken2 >= self.totalToken2 {
-                return Err("Insufficient pool balance");
+                return Err(Error::InsufficientLiquidity);
             }
 
             let token2After = self.totalToken2 - _amountToken2;
@@ -208,12 +223,12 @@ mod amm {
             &mut self,
             _amountToken1: Balance,
             _minToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token1Balance, _amountToken1)?;
             let amountToken2 = self.getSwapToken1Estimate(_amountToken1)?;
             if amountToken2 < _minToken2 {
-                return Err("Slippage tolerance exceeded");
+                return Err(Error::SlippageExceeded);
             }
             self.token1Balance
                 .entry(caller)
@@ -231,11 +246,11 @@ mod amm {
             &mut self,
             _amountToken2: Balance,
             _maxToken1: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             let caller = self.env().caller();
             let amountToken1 = self.getSwapToken1EstimateGivenToken2(_amountToken2)?;
             if amountToken1 > _maxToken1 {
-                return Err("Slippage tolerance exceeded");
+                return Err(Error::SlippageExceeded);
             }
 
             self.validAmountCheck(&self.token1Balance, amountToken1)?;
@@ -251,10 +266,7 @@ mod amm {
         }
 
         #[ink(message)]
-        pub fn getSwapToken2Estimate(
-            &self,
-            _amountToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        pub fn getSwapToken2Estimate(&self, _amountToken2: Balance) -> Result<Balance, Error> {
             self.activePool()?;
             let token2After = self.totalToken2 + _amountToken2;
             let token1After = self.K / token2After;
@@ -269,10 +281,10 @@ mod amm {
         pub fn getSwapToken2EstimateGivenToken1(
             &self,
             _amountToken1: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             if _amountToken1 >= self.totalToken1 {
-                return Err("Insufficient pool balance");
+                return Err(Error::InsufficientLiquidity);
             }
 
             let token1After = self.totalToken1 - _amountToken1;
@@ -286,12 +298,12 @@ mod amm {
             &mut self,
             _amountToken2: Balance,
             _minToken1: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token2Balance, _amountToken2)?;
             let amountToken1 = self.getSwapToken2Estimate(_amountToken2)?;
             if amountToken1 < _minToken1 {
-                return Err("Slippage tolerance exceeded");
+                return Err(Error::SlippageExceeded);
             }
             self.token2Balance
                 .entry(caller)
@@ -309,11 +321,11 @@ mod amm {
             &mut self,
             _amountToken1: Balance,
             _maxToken2: Balance,
-        ) -> Result<Balance, &'static str> {
+        ) -> Result<Balance, Error> {
             let caller = self.env().caller();
             let amountToken2 = self.getSwapToken2EstimateGivenToken1(_amountToken1)?;
             if amountToken2 > _maxToken2 {
-                return Err("Slippage tolerance exceeded");
+                return Err(Error::SlippageExceeded);
             }
 
             self.validAmountCheck(&self.token2Balance, amountToken2)?;
@@ -353,7 +365,7 @@ mod amm {
         fn zero_liquidity_test() {
             let contract = Amm::new();
             let res = contract.getEquivalentToken1Estimate(5);
-            assert_eq!(res, Err("Zero Liquidity"));
+            assert_eq!(res, Err(Error::ZeroLiquidity));
         }
 
         #[ink::test]
@@ -393,7 +405,7 @@ mod amm {
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
             let amountToken2 = contract.swapToken1(50, 51);
-            assert_eq!(amountToken2, Err("Slippage tolerance exceeded"));
+            assert_eq!(amountToken2, Err(Error::SlippageExceeded));
             assert_eq!(contract.getMyHoldings(), (50, 100, share));
             assert_eq!(contract.getPoolDetails(), (50, 100, share));
         }
