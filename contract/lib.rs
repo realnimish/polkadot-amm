@@ -40,12 +40,17 @@ mod amm {
         shares: HashMap<AccountId, Balance>,
         token1Balance: HashMap<AccountId, Balance>,
         token2Balance: HashMap<AccountId, Balance>,
+        fees: Balance,
     }
 
     impl Amm {
         #[ink(constructor)]
-        pub fn new() -> Self {
-            Default::default()
+        pub fn new(_fees: Balance) -> Self {
+            let _fees = if _fees >= 1000 { 0 } else { _fees };
+            Self {
+                fees: 1000 - _fees,
+                ..Default::default()
+            }
         }
 
         #[ink(message)]
@@ -193,6 +198,7 @@ mod amm {
         #[ink(message)]
         pub fn getSwapToken1Estimate(&self, _amountToken1: Balance) -> Result<Balance, Error> {
             self.activePool()?;
+            let _amountToken1 = self.fees * _amountToken1 / 1000;
             let token1After = self.totalToken1 + _amountToken1;
             let token2After = self.K / token1After;
             let mut amountToken2 = self.totalToken2 - token2After;
@@ -214,7 +220,7 @@ mod amm {
 
             let token2After = self.totalToken2 - _amountToken2;
             let token1After = self.K / token2After;
-            let amountToken1 = token1After - self.totalToken1;
+            let amountToken1 = (token1After - self.totalToken1) * 1000 / self.fees;
             Ok(amountToken1)
         }
 
@@ -268,6 +274,7 @@ mod amm {
         #[ink(message)]
         pub fn getSwapToken2Estimate(&self, _amountToken2: Balance) -> Result<Balance, Error> {
             self.activePool()?;
+            let _amountToken2 = self.fees * _amountToken2 / 1000;
             let token2After = self.totalToken2 + _amountToken2;
             let token1After = self.K / token2After;
             let mut amountToken1 = self.totalToken1 - token1After;
@@ -289,7 +296,7 @@ mod amm {
 
             let token1After = self.totalToken1 - _amountToken1;
             let token2After = self.K / token1After;
-            let amountToken2 = token2After - self.totalToken2;
+            let amountToken2 = (token2After - self.totalToken2) * 1000 / self.fees;
             Ok(amountToken2)
         }
 
@@ -349,28 +356,28 @@ mod amm {
 
         #[ink::test]
         fn new_works() {
-            let contract = Amm::new();
+            let contract = Amm::new(0);
             assert_eq!(contract.getMyHoldings(), (0, 0, 0));
             assert_eq!(contract.getPoolDetails(), (0, 0, 0));
         }
 
         #[ink::test]
         fn faucet_works() {
-            let mut contract = Amm::new();
+            let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             assert_eq!(contract.getMyHoldings(), (100, 200, 0));
         }
 
         #[ink::test]
         fn zero_liquidity_test() {
-            let contract = Amm::new();
+            let contract = Amm::new(0);
             let res = contract.getEquivalentToken1Estimate(5);
             assert_eq!(res, Err(Error::ZeroLiquidity));
         }
 
         #[ink::test]
         fn provide_works() {
-            let mut contract = Amm::new();
+            let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(10, 20).unwrap();
             assert_eq!(share, 100_000_000);
@@ -380,7 +387,7 @@ mod amm {
 
         #[ink::test]
         fn withdraw_works() {
-            let mut contract = Amm::new();
+            let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(10, 20).unwrap();
             assert_eq!(contract.withdraw(share / 5).unwrap(), (2, 4));
@@ -390,7 +397,7 @@ mod amm {
 
         #[ink::test]
         fn swap_works() {
-            let mut contract = Amm::new();
+            let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
             let amountToken2 = contract.swapToken1(50, 50).unwrap();
@@ -401,7 +408,7 @@ mod amm {
 
         #[ink::test]
         fn slippage_works() {
-            let mut contract = Amm::new();
+            let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
             let amountToken2 = contract.swapToken1(50, 51);
