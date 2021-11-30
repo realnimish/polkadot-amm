@@ -1,56 +1,79 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { abi, CONTRACT_ADDRESS } from "./constants";
 import ContainerComponent from "./components/ContainerComponent";
 import "./styles.css";
-
-import {ApiPromise, WsProvider} from '@polkadot/api';
-import {ContractPromise} from '@polkadot/api-contract';
-import {web3Accounts, web3Enable, web3FromSource} from '@polkadot/extension-dapp';
+import { RiWallet3Fill } from "react-icons/ri";
+import { GiBodySwapping } from "react-icons/gi";
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { ContractPromise } from "@polkadot/api-contract";
+import { web3FromSource } from "@polkadot/extension-dapp";
+import Identicon from "@polkadot/react-identicon";
 
 export default function App() {
-    const [myContract, setMyContract] = useState(null);
-    const [address, setAddress] = useState();
-    const [blockchainUrl, setBlockchainUrl] = useState('ws://127.0.0.1:9944');
-    const [api, setApi] = useState(null);
-    const [account,setAccount] = useState(null)
+  const [myContract, setMyContract] = useState(null);
+  const [activeAccount, setActiveAccount] = useState();
+  const [signer, setSigner] = useState(null);
+  const blockchainUrl = "ws://127.0.0.1:9944";
+  const [selectedTab, setSelectedTab] = useState("Swap");
 
-    async function connect() {
-        console.log("HERE")
-        const wsProvider = new WsProvider(blockchainUrl);
-        const api = await ApiPromise.create({provider: wsProvider});
-        setApi(api);
-        await extensionSetup();
+  useEffect(() => {
+    (async () => {
+      activeAccount &&
+        setSigner(
+          await web3FromSource(activeAccount.meta.source).then(
+            (res) => res.signer
+          )
+        );
+    })();
+  }, [activeAccount]);
 
-        const contract = new ContractPromise(api, abi, CONTRACT_ADDRESS);
-        console.log("Contract",contract)
-        setMyContract(contract);
+  async function connect() {
+    try {
+      console.log("----- Connect called -----");
+      const wsProvider = new WsProvider(blockchainUrl);
+      const api = await ApiPromise.create({ provider: wsProvider });
+      const contract = new ContractPromise(api, abi, CONTRACT_ADDRESS);
+      setMyContract(contract);
+      setSelectedTab("Account");
+    } catch (err) {
+      console.log("Couldn't connect to wallet :- ", err);
     }
+  }
 
-    const extensionSetup = async () => {
-        const extensions = await web3Enable('Local Canvas');
-        // console.log("DATA",extensions);
-        if (extensions.length === 0) {
-            return;
-        }
-        console.log("WEB3",(await web3Accounts())[0].address)
-        setAccount((await web3Accounts())[0])
-        setAddress((await web3Accounts())[0].address);
-    };
-
-    return (
-        <div className="pageBody">
-            <div className="navBar">
-                <div className="appName"> AMM </div>
-                {myContract === null ? (
-                    <div className="connectBtn" onClick={() => connect()}>
-                        {" "}
-                        Connect to Metamask{" "}
-                    </div>
-                ) : (
-                    <div className="connected"> {"Connected to " + address} </div>
-                )}
-            </div>
-            <ContainerComponent contract={myContract} connect={() => connect()} />
+  return (
+    <div className="pageBody">
+      <div className="navBar">
+        <div className="appName">
+          {" "}
+          AMM <GiBodySwapping className="appnameIcon" />
         </div>
-    );
+        {myContract === null || activeAccount == null ? (
+          <div className="connectBtn" onClick={() => connect()}>
+            <RiWallet3Fill className="accountIcon" />
+            <div className="connectWalletText">Connect your wallet</div>
+          </div>
+        ) : (
+          <div className="connected">
+            <Identicon
+              value={activeAccount.address}
+              size={32}
+              theme={"polkadot"}
+            />
+            <div className="connectedAccountName">
+              {activeAccount.meta.name}
+            </div>
+          </div>
+        )}
+      </div>
+      <ContainerComponent
+        contract={myContract}
+        selectedTab={selectedTab}
+        connect={() => connect()}
+        activeAccount={activeAccount}
+        signer={signer}
+        setActiveAccount={(val) => setActiveAccount(val)}
+        setActiveTab={(val) => setSelectedTab(val)}
+      />
+    </div>
+  );
 }
