@@ -52,6 +52,32 @@ mod amm {
             }
         }
 
+        fn activePool(&self) -> Result<(), Error> {
+            match self.getK() {
+                0 => Err(Error::ZeroLiquidity),
+                _ => Ok(()),
+            }
+        }
+
+        fn validAmountCheck(
+            &self,
+            _balance: &HashMap<AccountId, Balance>,
+            _qty: Balance,
+        ) -> Result<(), Error> {
+            let caller = self.env().caller();
+            let my_balance = *_balance.get(&caller).unwrap_or(&0);
+
+            match _qty {
+                0 => Err(Error::ZeroAmount),
+                _ if _qty > my_balance => Err(Error::InsufficientAmount),
+                _ => Ok(()),
+            }
+        }
+
+        fn getK(&self) -> Balance {
+            self.totalToken1 * self.totalToken2
+        }
+
         #[ink(message)]
         pub fn faucet(&mut self, _amountToken1: Balance, _amountToken2: Balance) {
             let caller = self.env().caller();
@@ -76,17 +102,6 @@ mod amm {
             (self.totalToken1, self.totalToken2, self.totalShares)
         }
 
-        fn activePool(&self) -> Result<(), Error> {
-            match self.getK() {
-                0 => Err(Error::ZeroLiquidity),
-                _ => Ok(()),
-            }
-        }
-
-        fn getK(&self) -> Balance {
-            self.totalToken1 * self.totalToken2
-        }
-
         #[ink(message)]
         pub fn getEquivalentToken1Estimate(
             &self,
@@ -103,21 +118,6 @@ mod amm {
         ) -> Result<Balance, Error> {
             self.activePool()?;
             Ok(self.totalToken2 * _amountToken1 / self.totalToken1)
-        }
-
-        fn validAmountCheck(
-            &self,
-            _balance: &HashMap<AccountId, Balance>,
-            _qty: Balance,
-        ) -> Result<(), Error> {
-            let caller = self.env().caller();
-            let my_balance = *_balance.get(&caller).unwrap_or(&0);
-
-            match _qty {
-                0 => Err(Error::ZeroAmount),
-                _ if _qty > my_balance => Err(Error::InsufficientAmount),
-                _ => Ok(()),
-            }
         }
 
         #[ink(message)]
@@ -415,6 +415,15 @@ mod amm {
             assert_eq!(amountToken2, Err(Error::SlippageExceeded));
             assert_eq!(contract.getMyHoldings(), (50, 100, share));
             assert_eq!(contract.getPoolDetails(), (50, 100, share));
+        }
+
+        #[ink::test]
+        fn trading_fees_works() {
+            let mut contract = Amm::new(100);
+            contract.faucet(100, 200);
+            contract.provide(50, 100).unwrap();
+            let amountToken2 = contract.getSwapToken1Estimate(50).unwrap();
+            assert_eq!(amountToken2, 48);
         }
     }
 }
