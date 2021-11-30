@@ -36,7 +36,6 @@ mod amm {
         totalShares: Balance,
         totalToken1: Balance,
         totalToken2: Balance,
-        K: Balance,
         shares: HashMap<AccountId, Balance>,
         token1Balance: HashMap<AccountId, Balance>,
         token2Balance: HashMap<AccountId, Balance>,
@@ -78,10 +77,14 @@ mod amm {
         }
 
         fn activePool(&self) -> Result<(), Error> {
-            match self.K {
+            match self.getK() {
                 0 => Err(Error::ZeroLiquidity),
                 _ => Ok(()),
             }
+        }
+
+        fn getK(&self) -> Balance {
+            self.totalToken1 * self.totalToken2
         }
 
         #[ink(message)]
@@ -150,8 +153,6 @@ mod amm {
             self.token2Balance.insert(caller, token2 - _amountToken2);
             self.totalToken1 += _amountToken1;
             self.totalToken2 += _amountToken2;
-            self.K = self.totalToken1 * self.totalToken2;
-
             self.totalShares += share;
             self.shares
                 .entry(caller)
@@ -184,7 +185,6 @@ mod amm {
 
             self.totalToken1 -= amountToken1;
             self.totalToken2 -= amountToken2;
-            self.K = self.totalToken1 * self.totalToken2;
             self.token1Balance
                 .entry(caller)
                 .and_modify(|val| *val += amountToken1);
@@ -200,7 +200,7 @@ mod amm {
             self.activePool()?;
             let _amountToken1 = self.fees * _amountToken1 / 1000;
             let token1After = self.totalToken1 + _amountToken1;
-            let token2After = self.K / token1After;
+            let token2After = self.getK() / token1After;
             let mut amountToken2 = self.totalToken2 - token2After;
             if amountToken2 == self.totalToken2 {
                 amountToken2 -= 1;
@@ -219,7 +219,7 @@ mod amm {
             }
 
             let token2After = self.totalToken2 - _amountToken2;
-            let token1After = self.K / token2After;
+            let token1After = self.getK() / token2After;
             let amountToken1 = (token1After - self.totalToken1) * 1000 / self.fees;
             Ok(amountToken1)
         }
@@ -276,7 +276,7 @@ mod amm {
             self.activePool()?;
             let _amountToken2 = self.fees * _amountToken2 / 1000;
             let token2After = self.totalToken2 + _amountToken2;
-            let token1After = self.K / token2After;
+            let token1After = self.getK() / token2After;
             let mut amountToken1 = self.totalToken1 - token1After;
             if amountToken1 == self.totalToken1 {
                 amountToken1 -= 1;
@@ -295,7 +295,7 @@ mod amm {
             }
 
             let token1After = self.totalToken1 - _amountToken1;
-            let token2After = self.K / token1After;
+            let token2After = self.getK() / token1After;
             let amountToken2 = (token2After - self.totalToken2) * 1000 / self.fees;
             Ok(amountToken2)
         }
