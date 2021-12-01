@@ -11,7 +11,7 @@ In this tutorial, we will learn how to build an AMM having features - Provide, W
 
 * [Node.js](https://nodejs.org/en/download/releases/) v10.18.0+
 * [Polkadot.js extension](https://polkadot.js.org/extension/) on your browser
-* [Complete the ink! setup](https://paritytech.github.io/ink-docs/getting-started/setup)
+* [Ink! setup](https://paritytech.github.io/ink-docs/getting-started/setup)
 
 # What's an AMM?
 
@@ -27,14 +27,13 @@ Move to the directory where you want to create your ink! project and run the fol
 cargo contract new amm
 ```
 
-Move inside the `amm` folder and replace the content of `lib.js` file with the following code. We have broke down the implementation into 10 parts.
+Move inside the `amm` folder and replace the content of `lib.rs` file with the following code. We have broke down the implementation into 10 parts.
 
 ```rust
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
 use ink_lang as ink;
-
 const PRECISION: u128 = 1_000_000; // Precision of 6 digits
 
 #[ink::contract]
@@ -66,7 +65,8 @@ mod amm {
 ```
 
 ## Part 1. Define Error enum
-The `Error` enum will contain all the error values that our contract throws. Paste the following code:
+
+The `Error` enum will contain all the error values that our contract throws. Ink requires returned values to have certain traits. So we are deriving them for our custom enum type with the `#[derive(...)]` attribute.
 
 ```rust
 #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -91,17 +91,107 @@ pub enum Error {
 }
 ```
 
-Ink requires returned values to have certain traits. So we are deriving them for our custom enum type with the `#[derive(...)]` attribute.
-
 ## Part 2. Define storage struct
 
+Next, we define the state variables needed to operate the AMM. We will be using the same mathematical formula as used by Uniswap to determine the price of the assets (**K = totalToken1 * totalToken2**). For simplicity purposes, We are maintaining our own internal balance mapping (token1Balance & token2Balance) instead of dealing with external tokens.
+
+```rust
+#[derive(Default)]
+#[ink(storage)]
+pub struct Amm {
+    totalShares: Balance, // Stores the total amount of share issued for the pool
+    totalToken1: Balance, // Stores the amount of Token1 locked in the pool
+    totalToken2: Balance, // Stores the amount of Token2 locked in the pool
+    shares: HashMap<AccountId, Balance>, // Stores the share holding of each provider
+    token1Balance: HashMap<AccountId, Balance>, // Stores the token1 balance of each user
+    token2Balance: HashMap<AccountId, Balance>, // Stores the token2 balance of each user
+    fees: Balance,        // Percent of trading fees charged on trade
+}
+```
+
 ## Part 3. Helper functions
+
+We will define the private functions in a separate implementation block to keep the code structure clean and we need to add the `#[ink(impl)]` attribute to make ink! aware of it. The following functions will be used to check the validity of the parameters passed to the functions and restrict certain activities when the pool is empty.
+
+```rust
+#[ink(impl)]
+impl Amm {
+    // Ensures that the _qty is non-zero and the user has enough balance
+    fn validAmountCheck(
+        &self,
+        _balance: &HashMap<AccountId, Balance>,
+        _qty: Balance,
+    ) -> Result<(), Error> {
+        let caller = self.env().caller();
+        let my_balance = *_balance.get(&caller).unwrap_or(&0);
+
+        match _qty {
+            0 => Err(Error::ZeroAmount),
+            _ if _qty > my_balance => Err(Error::InsufficientAmount),
+            _ => Ok(()),
+        }
+    }
+
+    // Returns the liquidity constant of the pool
+    fn getK(&self) -> Balance {
+        self.totalToken1 * self.totalToken2
+    }
+
+    // Used to restrict withdraw & swap feature till liquidity is added to the pool
+    fn activePool(&self) -> Result<(), Error> {
+        match self.getK() {
+            0 => Err(Error::ZeroLiquidity),
+            _ => Ok(()),
+        }
+    }
+}
+```
 
 ## Part 4. Constructor
 
 ## Part 5. Faucet
 
+As we are not using the external tokens and instead, maintaining a record of the balance ourselves; we need a way to allocate tokens to the new users so that they can interact with the dApp. Users can call the faucet function to get some tokens to play with!
+
+```rust
+/// Sends free token(s) to the invoker
+#[ink(message)]
+pub fn faucet(&mut self, _amountToken1: Balance, _amountToken2: Balance) {
+    let caller = self.env().caller();
+    let token1 = *self.token1Balance.get(&caller).unwrap_or(&0);
+    let token2 = *self.token2Balance.get(&caller).unwrap_or(&0);
+
+    self.token1Balance.insert(caller, token1 + _amountToken1);
+    self.token2Balance.insert(caller, token2 + _amountToken2);
+}
+```
+
 ## Part 6. Read current state
+
+The following functions are used to get the present state of the smart contract.
+
+```rust
+/// Returns the balance of the user
+#[ink(message)]
+pub fn getMyHoldings(&self) -> (Balance, Balance, Balance) {
+    let caller = self.env().caller();
+    let token1 = *self.token1Balance.get(&caller).unwrap_or(&0);
+    let token2 = *self.token2Balance.get(&caller).unwrap_or(&0);
+    let myShares = *self.shares.get(&caller).unwrap_or(&0);
+    (token1, token2, myShares)
+}
+
+/// Returns the amount of tokens locked in the pool,total shares issued & trading fee param
+#[ink(message)]
+pub fn getPoolDetails(&self) -> (Balance, Balance, Balance, Balance) {
+    (
+        self.totalToken1,
+        self.totalToken2,
+        self.totalShares,
+        self.fees,
+    )
+}
+```
 
 ## Part 7. Provide
 
