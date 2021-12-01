@@ -80,9 +80,8 @@ mod amm {
         #[ink(constructor)]
         pub fn new(_fees: Balance) -> Self {
             // Sets fees to zero if not in valid range
-            let _fees = if _fees >= 1000 { 0 } else { _fees };
             Self {
-                fees: 1000 - _fees,
+                fees: if _fees >= 1000 { 0 } else { _fees },
                 ..Default::default()
             }
         }
@@ -225,7 +224,7 @@ mod amm {
         #[ink(message)]
         pub fn getSwapToken1Estimate(&self, _amountToken1: Balance) -> Result<Balance, Error> {
             self.activePool()?;
-            let _amountToken1 = self.fees * _amountToken1 / 1000; // Adjusting the fees charged
+            let _amountToken1 = (1000 - self.fees) * _amountToken1 / 1000; // Adjusting the fees charged
 
             let token1After = self.totalToken1 + _amountToken1;
             let token2After = self.getK() / token1After;
@@ -251,7 +250,7 @@ mod amm {
 
             let token2After = self.totalToken2 - _amountToken2;
             let token1After = self.getK() / token2After;
-            let amountToken1 = (token1After - self.totalToken1) * 1000 / self.fees;
+            let amountToken1 = (token1After - self.totalToken1) * 1000 / (1000 - self.fees);
             Ok(amountToken1)
         }
 
@@ -315,7 +314,7 @@ mod amm {
         #[ink(message)]
         pub fn getSwapToken2Estimate(&self, _amountToken2: Balance) -> Result<Balance, Error> {
             self.activePool()?;
-            let _amountToken2 = self.fees * _amountToken2 / 1000; // Adjusting the fees charged
+            let _amountToken2 = (1000 - self.fees) * _amountToken2 / 1000; // Adjusting the fees charged
 
             let token2After = self.totalToken2 + _amountToken2;
             let token1After = self.getK() / token2After;
@@ -341,7 +340,7 @@ mod amm {
 
             let token1After = self.totalToken1 - _amountToken1;
             let token2After = self.getK() / token1After;
-            let amountToken2 = (token2After - self.totalToken2) * 1000 / self.fees;
+            let amountToken2 = (token2After - self.totalToken2) * 1000 / (1000 - self.fees);
             Ok(amountToken2)
         }
 
@@ -412,7 +411,7 @@ mod amm {
         fn new_works() {
             let contract = Amm::new(0);
             assert_eq!(contract.getMyHoldings(), (0, 0, 0));
-            assert_eq!(contract.getPoolDetails(), (0, 0, 0));
+            assert_eq!(contract.getPoolDetails(), (0, 0, 0, 0));
         }
 
         #[ink::test]
@@ -435,7 +434,7 @@ mod amm {
             contract.faucet(100, 200);
             let share = contract.provide(10, 20).unwrap();
             assert_eq!(share, 100_000_000);
-            assert_eq!(contract.getPoolDetails(), (10, 20, share));
+            assert_eq!(contract.getPoolDetails(), (10, 20, share, 0));
             assert_eq!(contract.getMyHoldings(), (90, 180, share));
         }
 
@@ -446,7 +445,7 @@ mod amm {
             let share = contract.provide(10, 20).unwrap();
             assert_eq!(contract.withdraw(share / 5).unwrap(), (2, 4));
             assert_eq!(contract.getMyHoldings(), (92, 184, 4 * share / 5));
-            assert_eq!(contract.getPoolDetails(), (8, 16, 4 * share / 5));
+            assert_eq!(contract.getPoolDetails(), (8, 16, 4 * share / 5, 0));
         }
 
         #[ink::test]
@@ -457,7 +456,7 @@ mod amm {
             let amountToken2 = contract.swapToken1(50, 50).unwrap();
             assert_eq!(amountToken2, 50);
             assert_eq!(contract.getMyHoldings(), (0, 150, share));
-            assert_eq!(contract.getPoolDetails(), (100, 50, share));
+            assert_eq!(contract.getPoolDetails(), (100, 50, share, 0));
         }
 
         #[ink::test]
@@ -468,7 +467,7 @@ mod amm {
             let amountToken2 = contract.swapToken1(50, 51);
             assert_eq!(amountToken2, Err(Error::SlippageExceeded));
             assert_eq!(contract.getMyHoldings(), (50, 100, share));
-            assert_eq!(contract.getPoolDetails(), (50, 100, share));
+            assert_eq!(contract.getPoolDetails(), (50, 100, share, 0));
         }
 
         #[ink::test]
