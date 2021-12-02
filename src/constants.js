@@ -1,11 +1,11 @@
 export const PRECISION = 1000000;
 export const RE = /^[0-9]*[.]?[0-9]{0,6}$/;
 // Replace the below address with the address of the contract you deployed 
-export const CONTRACT_ADDRESS = "5EyPHZVRBfV4zE3XPUz53CvFqme5owczAzt9fdGuAvgXA9g5";
+export const CONTRACT_ADDRESS = "5FKwmkASxdREPB27ymhAAShDfnWDTmwsHmCxwbih9xNmjwaP";
 // Replace the below abi with the abi of the contract you deployed
 export const abi = {
 	"source": {
-		"hash": "0xdd18b43fcdd895d0ce198da54d7da709fc4ab7f20f4856d33f382d61329739e0",
+		"hash": "0x5d1618c769b7c6fbd47eaba1e43e2a8485c6c2c04461cbaa81991c2eeb24f827",
 		"language": "ink! 3.0.0-rc6",
 		"compiler": "rustc 1.58.0-nightly"
 	},
@@ -275,7 +275,7 @@ export const abi = {
 				],
 				"mutates": false,
 				"name": [
-				"getSwapToken1Estimate"
+				"getSwapToken1EstimateGivenToken1"
 				],
 				"payable": false,
 				"returnType": {
@@ -284,7 +284,7 @@ export const abi = {
 					],
 					"type": 11
 				},
-				"selector": "0x41d4a6bb"
+				"selector": "0x6bc9f484"
 			},
 			{
 				"args": [
@@ -341,7 +341,7 @@ export const abi = {
 				],
 				"mutates": true,
 				"name": [
-				"swapToken1"
+				"swapToken1GivenToken1"
 				],
 				"payable": false,
 				"returnType": {
@@ -350,7 +350,7 @@ export const abi = {
 					],
 					"type": 11
 				},
-				"selector": "0xaa79a054"
+				"selector": "0x8adf0584"
 			},
 			{
 				"args": [
@@ -407,7 +407,7 @@ export const abi = {
 				],
 				"mutates": false,
 				"name": [
-				"getSwapToken2Estimate"
+				"getSwapToken2EstimateGivenToken2"
 				],
 				"payable": false,
 				"returnType": {
@@ -416,7 +416,7 @@ export const abi = {
 					],
 					"type": 11
 				},
-				"selector": "0x7453d92a"
+				"selector": "0xee312671"
 			},
 			{
 				"args": [
@@ -473,7 +473,7 @@ export const abi = {
 				],
 				"mutates": true,
 				"name": [
-				"swapToken2"
+				"swapToken2GivenToken2"
 				],
 				"payable": false,
 				"returnType": {
@@ -482,7 +482,7 @@ export const abi = {
 					],
 					"type": 11
 				},
-				"selector": "0xa636805e"
+				"selector": "0xa28d3f0a"
 			},
 			{
 				"args": [
