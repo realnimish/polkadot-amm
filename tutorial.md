@@ -1,6 +1,6 @@
 # Introduction
 
-In this tutorial, we will learn how to build an AMM having features - Provide, Withdraw & Swap with trading fees & slippage tolerance. Also, we will not deal with external tokens in the AMM instead, we will maintain our own mapping storing the balance of the accounts to keep things simple! We will build the smart contract in ink! (a rust based eDSL language) and the frontend of our application with the help of ReactJS.
+In this tutorial, we will learn how to build an AMM having features - Provide, Withdraw & Swap with trading fees & slippage tolerance. We will build the smart contract in ink! (a rust based eDSL language) and then see how to deploy it on a public testnet and will create our frontend in ReactJS. Also, we will not deal with external tokens in the AMM instead, we will maintain our own mapping storing the balance of the accounts to keep things simple! 
 
 # Prerequisites
 
@@ -375,7 +375,7 @@ pub fn getSwapToken1EstimateGivenToken2(
 }
 ```
 
-`swapToken1GivenToken1` actually swaps the amount instead of just giving an estimate. It takes the amount of Token1 that needs to be swapped for some Token2. To handle slippage, we take input the minimum Token2 that the user wants for a successful trade. If the expected Token2 is less than the threshold then the Tx is reverted.
+`swapToken1GivenToken1` takes the amount of Token1 that needs to be swapped for some Token2. To handle slippage, we take input the minimum Token2 that the user wants for a successful trade. If the expected Token2 is less than the threshold then the Tx is reverted.
 
 ```rust
 /// Swaps given amount of Token1 to Token2 using algorithmic price determination
@@ -407,7 +407,7 @@ pub fn swapToken1GivenToken1(
 }
 ```
 
-`swapToken1GivenToken2` actually swaps the amount instead of just giving an estimate. It takes the amount of Token2 that the user wants to receive and specifies the maximum amount of Token1 she is willing to exchange for it. If the required amount of Token1 exceeds the limit then the swap is cancelled.
+`swapToken1GivenToken2` takes the amount of Token2 that the user wants to receive and specifies the maximum amount of Token1 she is willing to exchange for it. If the required amount of Token1 exceeds the limit then the swap is cancelled.
 
 ```rust
 /// Swaps given amount of Token1 to Token2 using algorithmic price determination
@@ -441,7 +441,7 @@ pub fn swapToken1GivenToken2(
 
 Similarly for Token2 to Token1 swap we need to implement four functions - `getSwapToken2EstimateGivenToken2`, `getSwapToken2EstimateGivenToken1`, `swapToken2GivenToken2` & `swapToken2GivenToken1`. This is left as an exercise for you to implement :)
 
-This completes our smart contract implementation part. The complete code can be found at [contract/lib.rs](contract/lib.rs).
+Congrats!! on completing the implementation of the smart contract. The complete code can be found at [contract/lib.rs](contract/lib.rs).
 
 ## Part 10. Unit Testing
 
@@ -533,9 +533,22 @@ From your ink! project directory run the following command in the terminal to ru
 cargo +nightly contract test
 ```
 
-Next we will deploy the contract on our local substrate node in the next section.
+Next we will learn how to deploy the contract on a public testnet in the next section.
 
 # Deploying the smart contract
+
+We will deploy our ink! smart contract on Jupiter A1 testnet of Patract ([More info](https://docs.patract.io/en/jupiter/network)). If you wish to deploy on a local node or some other testnet instead, Change the `blockchainUrl` variable in [src/constants.js](src/constants.js) file to point to their endpoint. 
+
+First we need to build our ink! project to obtain the necessary artifacts. From your ink! project directory run the following command in the terminal:
+
+```text
+cargo +nightly contract build --release
+```
+
+This will generate the artifacts at `./target/ink`. We will use the `amm.wasm` and `metadata.json` (*It is the ABI of our contract and it will be needed when we integrate the frontend of our dApp*) files to deploy our smart contract.
+
+Next we need to fund our address to interact with the network. Go to the [faucet](https://patrastore.io/#/jupiter-a1/system/accounts) to get some testnet tokens.
+
 
 # How to interact with polkadot.{js}
 
@@ -557,7 +570,7 @@ import {
 } from "@polkadot/extension-dapp";
 import { ContractPromise } from "@polkadot/api-contract";
 
-// Store your contract's abi
+// Store your contract's ABI
 const CONTRACT_ABI = { ... };
 // Store contract address
 const CONTRACT_ADDRESS = "5EyPH...gXA9g5";
@@ -719,7 +732,11 @@ This component renders the main body of our application which contains the cente
 
 The `App.js` renders the `ContainerComponent` and connects the application to `polkadot.{js}`. 
 
-The `constants.js` file stores the contract **abi** and **CONTRACT_ADDRESS**. Don't forget to store your contract address and abi in those variables.
+The `constants.js` file stores the contract **ABI** and **CONTRACT_ADDRESS**. Don't forget to store your contract address and ABI in the respective variables. 
+
+{% hint style="info" %}  
+ABI can be obtained from your ink! project folder at `.../target/ink/metadata.json`
+{% endhint %}
 
 Now it's time to run our React app. Use the following command to start the React app.
 
