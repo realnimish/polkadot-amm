@@ -10,8 +10,8 @@ In this tutorial, we will learn how to build an AMM having features - Provide, W
 # Requirements
 
 * [Node.js](https://nodejs.org/en/download/releases/) v10.18.0+
-* [Polkadot.js extension](https://polkadot.js.org/extension/) on your browser
-* [Ink! setup](https://paritytech.github.io/ink-docs/getting-started/setup)
+* [Polkadot{.js} extension](https://polkadot.js.org/extension/) on your browser
+* [Ink! v3 setup](https://paritytech.github.io/ink-docs/getting-started/setup)
 
 # What's an AMM?
 
@@ -149,6 +149,21 @@ impl Amm {
 
 ## Part 4. Constructor
 
+Our constructor takes `_fees` as a parameter which determines the percent of fees the user is charged when doing a swap operation. The value of `_fees` should be between 0 and 1000(exclusive). Then any swap operation will be charged **_fees/1000** percent of the amount deposited.
+
+```rust
+/// Constructs a new AMM instance
+/// @param _fees: valid interval -> [0,1000)
+#[ink(constructor)]
+pub fn new(_fees: Balance) -> Self {
+    // Sets fees to zero if not in valid range
+    Self {
+        fees: if _fees >= 1000 { 0 } else { _fees },
+        ..Default::default()
+    }
+}
+```
+
 ## Part 5. Faucet
 
 As we are not using the external tokens and instead, maintaining a record of the balance ourselves; we need a way to allocate tokens to the new users so that they can interact with the dApp. Users can call the faucet function to get some tokens to play with!
@@ -195,13 +210,330 @@ pub fn getPoolDetails(&self) -> (Balance, Balance, Balance, Balance) {
 
 ## Part 7. Provide
 
+`provide` function takes two parameters - amount of token1 & amount of token2 that the user wants to lock in the pool. If the pool is initially empty then the equivalence rate is set as **_amountToken1 : _amountToken2** and the user is issued 100 shares for it. Otherwise, it is checked whether the two amounts provided by the user have equivalent value or not. This is done by checking if the two amounts are in equal proportion to the total number of their respective token locked in the pool i.e. **_amountToken1 : totalToken1 :: _amountToken2 : totalToken2** should hold.
+
+```rust
+/// Adding new liquidity in the pool
+/// Returns the amount of share issued for locking given assets
+#[ink(message)]
+pub fn provide(
+    &mut self,
+    _amountToken1: Balance,
+    _amountToken2: Balance,
+) -> Result<Balance, Error> {
+    self.validAmountCheck(&self.token1Balance, _amountToken1)?;
+    self.validAmountCheck(&self.token2Balance, _amountToken2)?;
+
+    let share;
+    if self.totalShares == 0 {
+        // Genesis liquidity is issued 100 Shares
+        share = 100 * super::PRECISION;
+    } else {
+        let share1 = self.totalShares * _amountToken1 / self.totalToken1;
+        let share2 = self.totalShares * _amountToken2 / self.totalToken2;
+
+        if share1 != share2 {
+            return Err(Error::NonEquivalentValue);
+        }
+        share = share1;
+    }
+
+    if share == 0 {
+        return Err(Error::ThresholdNotReached);
+    }
+
+    let caller = self.env().caller();
+    let token1 = *self.token1Balance.get(&caller).unwrap();
+    let token2 = *self.token2Balance.get(&caller).unwrap();
+    self.token1Balance.insert(caller, token1 - _amountToken1);
+    self.token2Balance.insert(caller, token2 - _amountToken2);
+
+    self.totalToken1 += _amountToken1;
+    self.totalToken2 += _amountToken2;
+    self.totalShares += share;
+    self.shares
+        .entry(caller)
+        .and_modify(|val| *val += share)
+        .or_insert(share);
+
+    Ok(share)
+}
+```
+
+The given functions help the user get an estimate of the amount of the second token that they need to lock for the given token amount. Here again, we use the proportion **_amountToken1 : totalToken1 :: _amountToken2 : totalToken2** to determine the amount of token1 required if we wish to lock given amount of token2 and vice-versa.
+
+```rust
+/// Returns amount of Token1 required when providing liquidity with _amountToken2 quantity of Token2
+#[ink(message)]
+pub fn getEquivalentToken1Estimate(
+    &self,
+    _amountToken2: Balance,
+) -> Result<Balance, Error> {
+    self.activePool()?;
+    Ok(self.totalToken1 * _amountToken2 / self.totalToken2)
+}
+
+/// Returns amount of Token2 required when providing liquidity with _amountToken1 quantity of Token1
+#[ink(message)]
+pub fn getEquivalentToken2Estimate(
+    &self,
+    _amountToken1: Balance,
+) -> Result<Balance, Error> {
+    self.activePool()?;
+    Ok(self.totalToken2 * _amountToken1 / self.totalToken1)
+}
+```
+
 ## Part 8. Withdraw
+
+Withdraw is used when a user wishes to burn a given amount of share to get back their tokens. Token1 and Token2 are released from the pool in proportion to the share burned with respect to total shares issued i.e. **share : totalShare :: amountTokenX : totalTokenX**.
+
+```rust
+/// Returns the estimate of Token1 & Token2 that will be released on burning given _share
+#[ink(message)]
+pub fn getWithdrawEstimate(&self, _share: Balance) -> Result<(Balance, Balance), Error> {
+    self.activePool()?;
+    if _share > self.totalShares {
+        return Err(Error::InvalidShare);
+    }
+
+    let amountToken1 = _share * self.totalToken1 / self.totalShares;
+    let amountToken2 = _share * self.totalToken2 / self.totalShares;
+    Ok((amountToken1, amountToken2))
+}
+
+/// Removes liquidity from the pool and releases corresponding Token1 & Token2 to the withdrawer
+#[ink(message)]
+pub fn withdraw(&mut self, _share: Balance) -> Result<(Balance, Balance), Error> {
+    let caller = self.env().caller();
+    self.validAmountCheck(&self.shares, _share)?;
+
+    let (amountToken1, amountToken2) = self.getWithdrawEstimate(_share)?;
+    self.shares.entry(caller).and_modify(|val| *val -= _share);
+    self.totalShares -= _share;
+
+    self.totalToken1 -= amountToken1;
+    self.totalToken2 -= amountToken2;
+
+    self.token1Balance
+        .entry(caller)
+        .and_modify(|val| *val += amountToken1);
+    self.token2Balance
+        .entry(caller)
+        .and_modify(|val| *val += amountToken2);
+
+    Ok((amountToken1, amountToken2))
+}
+```
 
 ## Part 9. Swap
 
+To swap from Token1 to Token2 we will implement four functions - `getSwapToken1EstimateGivenToken1`, `getSwapToken1EstimateGivenToken2`, `swapToken1GivenToken1` & `swapToken1GivenToken2`. The first two functions only determine the values of swap for estimation purposes while the last two does the actual conversion.
+
+`getSwapToken1EstimateGivenToken1` returns the amount of token2 that the user will get when depositing a given amount of token1. The amount of token2 is obtained from the equation **K = totalToken1 * totalToken2** and **K = (totalToken1 + delta * amountToken1) * (totalToken2 - amountToken2)** where **delta** is **(1000 - fees)/1000**. Therefore **delta \* amountToken1** is the adjusted token1Amount for which the resultant amountToken2 is calculated and rest of token1Amount goes into the pool as trading fees. We get the value **amountToken2** from solving the above equation.
+
+```rust
+/// Returns the amount of Token2 that the user will get when swapping a given amount of Token1 for Token2
+#[ink(message)]
+pub fn getSwapToken1EstimateGivenToken1(
+    &self,
+    _amountToken1: Balance,
+) -> Result<Balance, Error> {
+    self.activePool()?;
+    let _amountToken1 = (1000 - self.fees) * _amountToken1 / 1000; // Adjusting the fees charged
+
+    let token1After = self.totalToken1 + _amountToken1;
+    let token2After = self.getK() / token1After;
+    let mut amountToken2 = self.totalToken2 - token2After;
+
+    // To ensure that Token2's pool is not completely depleted leading to inf:0 ratio
+    if amountToken2 == self.totalToken2 {
+        amountToken2 -= 1;
+    }
+    Ok(amountToken2)
+}
+```
+
+`getSwapToken1EstimateGivenToken2` returns the amount of token1 that the user should deposit to get a given amount of token2. Amount of token1 is similarly obtained by solving the following equation **K = (totalToken1 + delta * amountToken1) * (totalToken2 - amountToken2)** for **amountToken1**.
+
+```rust
+/// Returns the amount of Token1 that the user should swap to get _amountToken2 in return
+#[ink(message)]
+pub fn getSwapToken1EstimateGivenToken2(
+    &self,
+    _amountToken2: Balance,
+) -> Result<Balance, Error> {
+    self.activePool()?;
+    if _amountToken2 >= self.totalToken2 {
+        return Err(Error::InsufficientLiquidity);
+    }
+
+    let token2After = self.totalToken2 - _amountToken2;
+    let token1After = self.getK() / token2After;
+    let amountToken1 = (token1After - self.totalToken1) * 1000 / (1000 - self.fees);
+    Ok(amountToken1)
+}
+```
+
+`swapToken1GivenToken1` actually swaps the amount instead of just giving an estimate. It takes the amount of Token1 that needs to be swapped for some Token2. To handle slippage, we take input the minimum Token2 that the user wants for a successful trade. If the expected Token2 is less than the threshold then the Tx is reverted.
+
+```rust
+/// Swaps given amount of Token1 to Token2 using algorithmic price determination
+/// Swap fails if Token2 amount is less than _minToken2
+#[ink(message)]
+pub fn swapToken1GivenToken1(
+    &mut self,
+    _amountToken1: Balance,
+    _minToken2: Balance,
+) -> Result<Balance, Error> {
+    let caller = self.env().caller();
+    self.validAmountCheck(&self.token1Balance, _amountToken1)?;
+
+    let amountToken2 = self.getSwapToken1EstimateGivenToken1(_amountToken1)?;
+    if amountToken2 < _minToken2 {
+        return Err(Error::SlippageExceeded);
+    }
+    self.token1Balance
+        .entry(caller)
+        .and_modify(|val| *val -= _amountToken1);
+
+    self.totalToken1 += _amountToken1;
+    self.totalToken2 -= amountToken2;
+
+    self.token2Balance
+        .entry(caller)
+        .and_modify(|val| *val += amountToken2);
+    Ok(amountToken2)
+}
+```
+
+`swapToken1GivenToken2` actually swaps the amount instead of just giving an estimate. It takes the amount of Token2 that the user wants to receive and specifies the maximum amount of Token1 she is willing to exchange for it. If the required amount of Token1 exceeds the limit then the swap is cancelled.
+
+```rust
+/// Swaps given amount of Token1 to Token2 using algorithmic price determination
+/// Swap fails if amount of Token1 required to obtain _amountToken2 exceeds _maxToken1
+#[ink(message)]
+pub fn swapToken1GivenToken2(
+    &mut self,
+    _amountToken2: Balance,
+    _maxToken1: Balance,
+) -> Result<Balance, Error> {
+    let caller = self.env().caller();
+    let amountToken1 = self.getSwapToken1EstimateGivenToken2(_amountToken2)?;
+    if amountToken1 > _maxToken1 {
+        return Err(Error::SlippageExceeded);
+    }
+    self.validAmountCheck(&self.token1Balance, amountToken1)?;
+
+    self.token1Balance
+        .entry(caller)
+        .and_modify(|val| *val -= amountToken1);
+
+    self.totalToken1 += amountToken1;
+    self.totalToken2 -= _amountToken2;
+
+    self.token2Balance
+        .entry(caller)
+        .and_modify(|val| *val += _amountToken2);
+    Ok(amountToken1)
+}
+```
+
+Similarly for Token2 to Token1 swap we need to implement four functions - `getSwapToken2EstimateGivenToken2`, `getSwapToken2EstimateGivenToken1`, `swapToken2GivenToken2` & `swapToken2GivenToken1`. This is left as an exercise for you to implement :)
+
+This completes our smart contract implementation part. The complete code can be found at [contract/lib.rs](contract/lib.rs).
+
 ## Part 10. Unit Testing
 
-This completes the smart contract implementation part. Now we will deploy it on our local substrate node in the next section.
+Now let's write some unit tests to make sure our program is working as intended. Module(s) marked with `#[cfg(test)]` attribute tells rust to run the following code when `cargo test` command is executed. Test functions are marked with attribute `#[ink::test]` when we want ink! to inject enviornment variables like `caller` during the contract invokation.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ink_lang as ink;
+
+    #[ink::test]
+    fn new_works() {
+        let contract = Amm::new(0);
+        assert_eq!(contract.getMyHoldings(), (0, 0, 0));
+        assert_eq!(contract.getPoolDetails(), (0, 0, 0, 0));
+    }
+
+    #[ink::test]
+    fn faucet_works() {
+        let mut contract = Amm::new(0);
+        contract.faucet(100, 200);
+        assert_eq!(contract.getMyHoldings(), (100, 200, 0));
+    }
+
+    #[ink::test]
+    fn zero_liquidity_test() {
+        let contract = Amm::new(0);
+        let res = contract.getEquivalentToken1Estimate(5);
+        assert_eq!(res, Err(Error::ZeroLiquidity));
+    }
+
+    #[ink::test]
+    fn provide_works() {
+        let mut contract = Amm::new(0);
+        contract.faucet(100, 200);
+        let share = contract.provide(10, 20).unwrap();
+        assert_eq!(share, 100_000_000);
+        assert_eq!(contract.getPoolDetails(), (10, 20, share, 0));
+        assert_eq!(contract.getMyHoldings(), (90, 180, share));
+    }
+
+    #[ink::test]
+    fn withdraw_works() {
+        let mut contract = Amm::new(0);
+        contract.faucet(100, 200);
+        let share = contract.provide(10, 20).unwrap();
+        assert_eq!(contract.withdraw(share / 5).unwrap(), (2, 4));
+        assert_eq!(contract.getMyHoldings(), (92, 184, 4 * share / 5));
+        assert_eq!(contract.getPoolDetails(), (8, 16, 4 * share / 5, 0));
+    }
+
+    #[ink::test]
+    fn swap_works() {
+        let mut contract = Amm::new(0);
+        contract.faucet(100, 200);
+        let share = contract.provide(50, 100).unwrap();
+        let amountToken2 = contract.swapToken1GivenToken1(50, 50).unwrap();
+        assert_eq!(amountToken2, 50);
+        assert_eq!(contract.getMyHoldings(), (0, 150, share));
+        assert_eq!(contract.getPoolDetails(), (100, 50, share, 0));
+    }
+
+    #[ink::test]
+    fn slippage_works() {
+        let mut contract = Amm::new(0);
+        contract.faucet(100, 200);
+        let share = contract.provide(50, 100).unwrap();
+        let amountToken2 = contract.swapToken1GivenToken1(50, 51);
+        assert_eq!(amountToken2, Err(Error::SlippageExceeded));
+        assert_eq!(contract.getMyHoldings(), (50, 100, share));
+        assert_eq!(contract.getPoolDetails(), (50, 100, share, 0));
+    }
+
+    #[ink::test]
+    fn trading_fees_works() {
+        let mut contract = Amm::new(100);
+        contract.faucet(100, 200);
+        contract.provide(50, 100).unwrap();
+        let amountToken2 = contract.getSwapToken1EstimateGivenToken1(50).unwrap();
+        assert_eq!(amountToken2, 48);
+    }
+}
+```
+
+From your ink! project directory run the following command in the terminal to run the tests module:
+
+```text
+cargo +nightly contract test
+```
+
+Next we will deploy the contract on our local substrate node in the next section.
 
 # Deploying the smart contract
 
@@ -347,6 +679,12 @@ npm start
 
 # Walkthrough
 
+# Conclusion
+
+Congratulations! We have successfully developed a working AMM model where users can swap tokens, provide & withdraw liquidity. As a next step, you can play around with the price formula, integrate the ERC20 standard, and much more...
+
+# Troubleshooting
+
 # About the Author(s)  
 
 The tutorial was created by [Sayan Kar](https://github.com/SayanKar) and [Nimish Agrawal](https://github.com/realnimish). You can reach out to them on [Figment Forum](https://community.figment.io/u/nimishagrawal100.in/) for any query regarding the tutorial.
@@ -355,3 +693,6 @@ The tutorial was created by [Sayan Kar](https://github.com/SayanKar) and [Nimish
 
 - [How Uniswap works](https://docs.uniswap.org/protocol/V2/concepts/protocol-overview/how-uniswap-works)
 
+- [Constant Product Market Maker](https://github.com/runtimeverification/verified-smart-contracts/blob/uniswap/uniswap/x-y-k.pdf)
+
+- [How to integrate with frontend](https://github.com/polk4-net/flipper-app)
