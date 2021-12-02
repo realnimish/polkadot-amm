@@ -22,7 +22,7 @@ export default function SwapComponent(props) {
       try {
         if (coin[0] === "KAR") {
           await props.contract.query
-            .getSwapToken1Estimate(
+            .getSwapToken1EstimateGivenToken1(
               props.activeAccount.address,
               { value: 0, gasLimit: -1 },
               val * PRECISION
@@ -38,7 +38,7 @@ export default function SwapComponent(props) {
             });
         } else {
           await props.contract.query
-            .getSwapToken2Estimate(
+            .getSwapToken2EstimateGivenToken2(
               props.activeAccount.address,
               { value: 0, gasLimit: -1 },
               val * PRECISION
@@ -128,7 +128,7 @@ export default function SwapComponent(props) {
       try {
         if (coin[0] === "KAR") {
           await props.contract.query
-            .swapToken1(
+            .swapToken1GivenToken1(
               props.activeAccount.address,
               { value: 0, gasLimit: -1 },
               amountFrom * PRECISION,
@@ -142,7 +142,7 @@ export default function SwapComponent(props) {
             .then(async (res) => {
               if (!res.Err) {
                 await props.contract.tx
-                  .swapToken1(
+                  .swapToken1GivenToken1(
                     { value: 0, gasLimit: -1 },
                     amountFrom * PRECISION,
                     ((amountTo * (100 - slippageTolerance)) / 100) * PRECISION
@@ -167,7 +167,7 @@ export default function SwapComponent(props) {
             });
         } else {
           await props.contract.query
-            .swapToken2(
+            .swapToken2GivenToken2(
               props.activeAccount.address,
               { value: 0, gasLimit: -1 },
               amountFrom * PRECISION,
@@ -181,7 +181,7 @@ export default function SwapComponent(props) {
             .then(async (res) => {
               if (!res.Err) {
                 await props.contract.tx
-                  .swapToken2(
+                  .swapToken2GivenToken2(
                     { value: 0, gasLimit: -1 },
                     amountFrom * PRECISION,
                     ((amountTo * (100 - slippageTolerance)) / 100) * PRECISION

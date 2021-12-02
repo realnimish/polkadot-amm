@@ -1,5 +1,6 @@
 export const PRECISION = 1000000;
 export const RE = /^[0-9]*[.]?[0-9]{0,6}$/;
+export const blockchainUrl =  "ws://127.0.0.1:9944";
 // Replace the below address with the address of the contract you deployed 
 export const CONTRACT_ADDRESS = "5FKwmkASxdREPB27ymhAAShDfnWDTmwsHmCxwbih9xNmjwaP";
 // Replace the below abi with the abi of the contract you deployed

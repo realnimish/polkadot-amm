@@ -539,92 +539,142 @@ Next we will deploy the contract on our local substrate node in the next section
 
 # How to interact with polkadot.{js}
 
-In this section we will see how to create an API instance, make a transaction and a query.
-
-Install the required packages 
+In this section we will see how to interact with our smart contract using polkadot.{js}. Install the required packages 
 
 ```text
 npm install @polkadot/api @polkadot/api-contract @polkadot/extension-dapp
 ```
 
-## Creating an API instance
-
-To create a API instance refer the following code block
+Let's see the following code block, and understand how it works
 
 ```javascript
-// import
-import { ApiPromise, WsProvider } from '@polkadot/api';
+// Imports
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import {
+  web3Accounts,
+  web3Enable,
+  web3FromSource,
+} from "@polkadot/extension-dapp";
+import { ContractPromise } from "@polkadot/api-contract";
 
-// creates a provider
+// Store your contract's abi
+const CONTRACT_ABI = { ... };
+// Store contract address
+const CONTRACT_ADDRESS = "5EyPH...gXA9g5";
+
+// Create a new instance of contract
 const wsProvider = new WsProvider("ws://127.0.0.1:9944");
-
-// new API instance
 const api = await ApiPromise.create({ provider: wsProvider });
-```
+const contract = new ContractPromise(api, CONTRACT_ABI, CONTRACT_ADDRESS);
 
-## Fetching the available account
-
-Refer the below code to fetch all the account available.
-
-```javascript
-import { web3Accounts, web3Enable, web3FromSource } from '@polkadot/extension-dapp';
-// returns an array of all the injected sources
-const  extensions = await web3Enable('local canvas');
-
-// returns an array of { address, meta: { name, source } }
-// meta.source contains the name of the extension that provides this account
+// Get available accounts on Polkadot.{js} 
+const extensions = await web3Enable("local canvas");
 const allAccounts = await web3Accounts();
-
-// select an account to interact with the contract
 const selectedAccount = allAccounts[0];
 
-// create a signer 
-const accountSigner = await web3FromSource(activeAccount.meta.source).then((res) => res.signer);
-```
+// Create a signer 
+const accountSigner = await web3FromSource(selectedAccount.meta.source).then(
+  (res) => res.signer
+);
 
-## Interacting with the contract
-
-Use the following interface to interact with your smart contract
-
-```javascript
-import { ContractPromise } from '@polkadot/api-contract';
-
-// attach to an existing contract with a known ABI and address.
-const contract = new ContractPromise(api, abi, address);
-```
-
-## Making a query
-
-Now let's see how to make a query to our AMM contract. In the following code block we fetch the assets of a account by calling the method `getMyHoldings`.
-
-```javascript
-await contract.query
+// Fetch account holdings and display details (makes a query)
+const getAccountHoldings = async () => {
+  let holdings = await contract.query
     .getMyHoldings(selectedAccount.address, { value: 0, gasLimit: -1 })
     .then((res) => {
-      return res.output.toHuman();
-    })
-    .then((res) => {
-      // do something
+      if (!res?.result?.toHuman()?.Err) return res.output.toHuman();
     });
-```
+  console.log("Account Holdings ", holdings);
+};
 
-## Making a Transaction
-
-We will now fund the account with 100 KAR tokens and 150 KOTHI tokens, for this we will make a transaction using the method `faucet`.
-
-```javascript
-await contract.tx
-    .faucet({ value: 0, gasLimit: -1 }, 100, 150)
+// Fund the account with given amount (makes a transaction)
+const faucet = async (amountKAR, amountKOTHI) => {
+    await contract.tx
+    .faucet({ value: 0, gasLimit: -1 }, amountKAR, amountKOTHI)
     .signAndSend(
       selectedAccount.address,
       { signer: accountSigner },
       (res) => {
         if (res.status.isFinalized) {
-          // do something
+          getAccountHoldings();
         }
       }
     );
+}
 ```
+
+In the above javascript code we have demostrated how to make a query and transaction to our AMM smart contract. Now let's understand each line of the above code.
+
+```javascript
+// Creates a provider
+const wsProvider = new WsProvider("ws://127.0.0.1:9944");
+
+// Creates a API instance
+const api = await ApiPromise.create({ provider: wsProvider });
+
+// Attach to an existing contract with a known ABI and address.
+const contract = new ContractPromise(api, CONTRACT_ABI, CONTRACT_ADDRESS);
+```
+
+To interact with the smart contract we need to create an instance of the contract. For that we first need to make a API instance and any API requires a provider and take a look at the above snippet we create one with **WsProvider**. Next API creation is done via the **ApiPromise.create** interface. If a provider is not passed to the **ApiPromise.create** it will construct a default WsProvider instance to connect to `ws://127.0.0.1:9944`. 
+
+Finally we will interact with the deployed contract by making a new instance with the help of **ContractPromise** interface, it allows to manage on-chain contracts, making read calls and executing transactions on contracts.
+
+```javascript
+// Retrieves the list of all injected extensions/providers
+const extensions = await web3Enable("demo");
+
+// Returns a list of all the injected accounts, accross all extensions 
+const allAccounts = await web3Accounts();
+
+// We select the first account in the list
+const selectedAccount = allAccounts[0];
+```
+
+Now we need to select an account to work with. We can get the list of all injected extensions with **web3Enable**. To get the list of all available accounts we use the help of **web3Accounts**. In the above snippet we store the first account in a variable **selectedAccount**. 
+ 
+```javascript
+// Retrieves the signer interface from this account
+// web#FromSource returns an InjectedExtension type
+const accountSigner = await web3FromSource(selectedAccount.meta.source).then(
+  (res) => res.signer
+);
+```
+
+To make a transaction we need to retrieve the signer from the account. Now we are all set to interact with the smart contract.  
+
+```javascript
+// Fetch account holdings and display details (makes a query)
+const getAccountHoldings = async () => {
+  let holdings = await contract.query
+    .getMyHoldings(selectedAccount.address, { value: 0, gasLimit: -1 })
+    .then((res) => {
+      if (!res?.result?.toHuman()?.Err) return res.output.toHuman();
+    });
+  console.log("Account Holdings ", holdings);
+};
+```
+
+We have created a function **getAccountHoldings**, it makes a query to **getMyHoldings** method of our smart contract. We pass the account address as first parameter, 2nd parameter is an object with two keys, **value** only useful on isPayable messages, **gasLimit** sets the maximum gas our query can take. We have set **gasLimit** to **-1**, which indicates the limit is unbounded and can use maximum available.
+
+```javascript
+// Fund the account with given amount (makes a transaction)
+const faucet = async (amountKAR, amountKOTHI) => {
+    await contract.tx
+    .faucet({ value: 0, gasLimit: -1 }, amountKAR, amountKOTHI)
+    .signAndSend(
+      selectedAccount.address,
+      { signer: accountSigner },
+      (res) => {
+        if (res.status.isFinalized) {
+          getAccountHoldings();
+        }
+      }
+    );
+}
+```
+
+The function faucet, makes a transaction to **faucet** method of our smart contract. We pass the object with **value** and **gasLimit** keys as first parameter and then we pass the other arguments required for the **faucet** method, the **amountKAR** and **amountKOTHI**. We then sign and send the transaction using **signAndSend** method. To this method we pass the account address as the first parameter, an object containing the signer as the second parameter, and a callback function which calls the **getAccountHoldings** function when the transaction is Finalized.  
 
 # Creating a frontend in React
 

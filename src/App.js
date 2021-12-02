@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { abi, CONTRACT_ADDRESS } from "./constants";
+import { abi, CONTRACT_ADDRESS, blockchainUrl } from "./constants";
 import ContainerComponent from "./components/ContainerComponent";
 import "./styles.css";
 import { RiWallet3Fill } from "react-icons/ri";
@@ -13,7 +13,6 @@ export default function App() {
   const [myContract, setMyContract] = useState(null);
   const [activeAccount, setActiveAccount] = useState();
   const [signer, setSigner] = useState(null);
-  const blockchainUrl = "ws://127.0.0.1:9944";
   const [selectedTab, setSelectedTab] = useState("Swap");
 
   useEffect(() => {

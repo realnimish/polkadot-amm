@@ -51,10 +51,15 @@ export default function WithdrawComponent(props) {
         )
         .then((res) => res.output.toHuman())
         .then((res) => {
-          setEstimateTokens([
-            res.Ok[0].replace(/,/g, "") / PRECISION,
-            res.Ok[1].replace(/,/g, "") / PRECISION,
-          ]);
+          if (!res.Err) {
+            setEstimateTokens([
+              res.Ok[0].replace(/,/g, "") / PRECISION,
+              res.Ok[1].replace(/,/g, "") / PRECISION,
+            ]);
+          } else {
+            console.log(res.Err);
+            alert(res.Err);
+          }
         });
     } else alert("Connect your wallet");
   };
