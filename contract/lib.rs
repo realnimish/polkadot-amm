@@ -222,7 +222,10 @@ mod amm {
 
         /// Returns the amount of Token2 that the user will get when swapping a given amount of Token1 for Token2
         #[ink(message)]
-        pub fn getSwapToken1Estimate(&self, _amountToken1: Balance) -> Result<Balance, Error> {
+        pub fn getSwapToken1EstimateGivenToken1(
+            &self,
+            _amountToken1: Balance,
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             let _amountToken1 = (1000 - self.fees) * _amountToken1 / 1000; // Adjusting the fees charged
 
@@ -257,7 +260,7 @@ mod amm {
         /// Swaps given amount of Token1 to Token2 using algorithmic price determination
         /// Swap fails if Token2 amount is less than _minToken2
         #[ink(message)]
-        pub fn swapToken1(
+        pub fn swapToken1GivenToken1(
             &mut self,
             _amountToken1: Balance,
             _minToken2: Balance,
@@ -265,7 +268,7 @@ mod amm {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token1Balance, _amountToken1)?;
 
-            let amountToken2 = self.getSwapToken1Estimate(_amountToken1)?;
+            let amountToken2 = self.getSwapToken1EstimateGivenToken1(_amountToken1)?;
             if amountToken2 < _minToken2 {
                 return Err(Error::SlippageExceeded);
             }
@@ -312,7 +315,10 @@ mod amm {
 
         /// Returns the amount of Token2 that the user will get when swapping a given amount of Token1 for Token2
         #[ink(message)]
-        pub fn getSwapToken2Estimate(&self, _amountToken2: Balance) -> Result<Balance, Error> {
+        pub fn getSwapToken2EstimateGivenToken2(
+            &self,
+            _amountToken2: Balance,
+        ) -> Result<Balance, Error> {
             self.activePool()?;
             let _amountToken2 = (1000 - self.fees) * _amountToken2 / 1000; // Adjusting the fees charged
 
@@ -347,7 +353,7 @@ mod amm {
         /// Swaps given amount of Token2 to Token1 using algorithmic price determination
         /// Swap fails if Token1 amount is less than _minToken1
         #[ink(message)]
-        pub fn swapToken2(
+        pub fn swapToken2GivenToken2(
             &mut self,
             _amountToken2: Balance,
             _minToken1: Balance,
@@ -355,7 +361,7 @@ mod amm {
             let caller = self.env().caller();
             self.validAmountCheck(&self.token2Balance, _amountToken2)?;
 
-            let amountToken1 = self.getSwapToken2Estimate(_amountToken2)?;
+            let amountToken1 = self.getSwapToken2EstimateGivenToken2(_amountToken2)?;
             if amountToken1 < _minToken1 {
                 return Err(Error::SlippageExceeded);
             }
@@ -453,7 +459,7 @@ mod amm {
             let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
-            let amountToken2 = contract.swapToken1(50, 50).unwrap();
+            let amountToken2 = contract.swapToken1GivenToken1(50, 50).unwrap();
             assert_eq!(amountToken2, 50);
             assert_eq!(contract.getMyHoldings(), (0, 150, share));
             assert_eq!(contract.getPoolDetails(), (100, 50, share, 0));
@@ -464,7 +470,7 @@ mod amm {
             let mut contract = Amm::new(0);
             contract.faucet(100, 200);
             let share = contract.provide(50, 100).unwrap();
-            let amountToken2 = contract.swapToken1(50, 51);
+            let amountToken2 = contract.swapToken1GivenToken1(50, 51);
             assert_eq!(amountToken2, Err(Error::SlippageExceeded));
             assert_eq!(contract.getMyHoldings(), (50, 100, share));
             assert_eq!(contract.getPoolDetails(), (50, 100, share, 0));
@@ -475,7 +481,7 @@ mod amm {
             let mut contract = Amm::new(100);
             contract.faucet(100, 200);
             contract.provide(50, 100).unwrap();
-            let amountToken2 = contract.getSwapToken1Estimate(50).unwrap();
+            let amountToken2 = contract.getSwapToken1EstimateGivenToken1(50).unwrap();
             assert_eq!(amountToken2, 48);
         }
     }
