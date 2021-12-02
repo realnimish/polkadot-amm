@@ -144,6 +144,12 @@ export default function AccountComponent(props) {
                       {props.holding["totalShare"]}
                     </div>
                   </div>
+                  <div className="row">
+                    <div className="attributeName">Trading Fee</div>
+                    <div className="attributeValue">
+                      {props.holding["tradingFees"] + "%"}
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
