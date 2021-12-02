@@ -269,7 +269,7 @@ export default function SwapComponent(props) {
         </div>
       </div>
       <div className="transactionFee">
-        TRADING FEE: <b>{0.01 * amountFrom + " " + coin[0]}</b>
+        TRADING FEE({props.holding["tradingFees"] + "%"}): <b>{0.01 * amountFrom + " " + coin[0]}</b>
       </div>
       <div className="transactionFee">
         MINIMUM {coin[1]} YOU RECIEVE:{" "}
