@@ -767,6 +767,8 @@ npm start
 
 # Walkthrough
 
+![demo](public/demo.gif)
+
 # Conclusion
 
 Congratulations! We have successfully developed a working AMM model where users can swap tokens, provide & withdraw liquidity. As a next step, you can play around with the price formula, integrate the ERC20 standard, and much more...
@@ -801,4 +803,6 @@ The tutorial was created by [Sayan Kar](https://github.com/SayanKar) and [Nimish
 
 - [Constant Product Market Maker](https://github.com/runtimeverification/verified-smart-contracts/blob/uniswap/uniswap/x-y-k.pdf)
 
-- [How to integrate with frontend](https://github.com/polk4-net/flipper-app)
+- [How to build an AMM on Avalanche](https://github.com/realnimish/avalanche-amm)
+
+- [How to integrate substate contract with frontend](https://github.com/polk4-net/flipper-app)
