@@ -1,6 +1,6 @@
 # Introduction
 
-In this tutorial, we will learn how to build an AMM having features - Provide, Withdraw & Swap with trading fees & slippage tolerance. We will build the smart contract in ink! (a rust based eDSL language) and then see how to deploy it on a public testnet and will create our frontend in ReactJS. Also, we will not deal with external tokens in the AMM instead, we will maintain our own mapping storing the balance of the accounts to keep things simple! 
+In this tutorial, we will learn how to build an AMM having features - Provide, Withdraw & Swap with trading fees & slippage tolerance. We will build the smart contract in ink! (a rust based eDSL language) and then see how to deploy it on a public testnet and will create our frontend in ReactJS.
 
 # Prerequisites
 
@@ -27,7 +27,7 @@ Move to the directory where you want to create your ink! project and run the fol
 cargo contract new amm
 ```
 
-Move inside the `amm` folder and replace the content of `lib.rs` file with the following code. We have broke down the implementation into 10 parts.
+Move inside the `amm` folder and replace the content of `lib.rs` file with the following code. We have broken down the implementation into 10 parts.
 
 ```rust
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -66,7 +66,7 @@ mod amm {
 
 ## Part 1. Define Error enum
 
-The `Error` enum will contain all the error values that our contract throws. Ink requires returned values to have certain traits. So we are deriving them for our custom enum type with the `#[derive(...)]` attribute.
+The `Error` enum will contain all the error values that our contract throws. Ink! requires returned values to have certain traits. So we are deriving them for our custom enum type with the `#[derive(...)]` attribute.
 
 ```rust
 #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -149,7 +149,7 @@ impl Amm {
 
 ## Part 4. Constructor
 
-Our constructor takes `_fees` as a parameter which determines the percent of fees the user is charged when doing a swap operation. The value of `_fees` should be between 0 and 1000(exclusive). Then any swap operation will be charged **_fees/1000** percent of the amount deposited.
+Our constructor takes `_fees` as a parameter that determines the percent of fees the user is charged when doing a swap operation. The value of `_fees` should be between 0 and 1000(exclusive). Then any swap operation will be charged **_fees/1000** percent of the amount deposited.
 
 ```rust
 /// Constructs a new AMM instance
@@ -210,7 +210,7 @@ pub fn getPoolDetails(&self) -> (Balance, Balance, Balance, Balance) {
 
 ## Part 7. Provide
 
-`provide` function takes two parameters - amount of token1 & amount of token2 that the user wants to lock in the pool. If the pool is initially empty then the equivalence rate is set as **_amountToken1 : _amountToken2** and the user is issued 100 shares for it. Otherwise, it is checked whether the two amounts provided by the user have equivalent value or not. This is done by checking if the two amounts are in equal proportion to the total number of their respective token locked in the pool i.e. **_amountToken1 : totalToken1 :: _amountToken2 : totalToken2** should hold.
+`provide` function takes two parameters - the amount of token1 & the amount of token2 that the user wants to lock in the pool. If the pool is initially empty then the equivalence rate is set as **_amountToken1 : _amountToken2** and the user is issued 100 shares for it. Otherwise, it is checked whether the two amounts provided by the user have equivalent value or not. This is done by checking if the two amounts are in equal proportion to the total number of their respective token locked in the pool i.e. **_amountToken1 : totalToken1 : : _amountToken2 : totalToken2** should hold.
 
 ```rust
 /// Adding new liquidity in the pool
@@ -260,7 +260,7 @@ pub fn provide(
 }
 ```
 
-The given functions help the user get an estimate of the amount of the second token that they need to lock for the given token amount. Here again, we use the proportion **_amountToken1 : totalToken1 :: _amountToken2 : totalToken2** to determine the amount of token1 required if we wish to lock given amount of token2 and vice-versa.
+The given functions help the user get an estimate of the amount of the second token that they need to lock for the given token amount. Here again, we use the proportion **_amountToken1 : totalToken1 : : _amountToken2 : totalToken2** to determine the amount of token1 required if we wish to lock given amount of token2 and vice-versa.
 
 ```rust
 /// Returns amount of Token1 required when providing liquidity with _amountToken2 quantity of Token2
@@ -286,7 +286,7 @@ pub fn getEquivalentToken2Estimate(
 
 ## Part 8. Withdraw
 
-Withdraw is used when a user wishes to burn a given amount of share to get back their tokens. Token1 and Token2 are released from the pool in proportion to the share burned with respect to total shares issued i.e. **share : totalShare :: amountTokenX : totalTokenX**.
+Withdraw is used when a user wishes to burn a given amount of share to get back their tokens. Token1 and Token2 are released from the pool in proportion to the share burned with respect to total shares issued i.e. **share : totalShare : : amountTokenX : totalTokenX**.
 
 ```rust
 /// Returns the estimate of Token1 & Token2 that will be released on burning given _share
@@ -328,7 +328,7 @@ pub fn withdraw(&mut self, _share: Balance) -> Result<(Balance, Balance), Error>
 
 ## Part 9. Swap
 
-To swap from Token1 to Token2 we will implement four functions - `getSwapToken1EstimateGivenToken1`, `getSwapToken1EstimateGivenToken2`, `swapToken1GivenToken1` & `swapToken1GivenToken2`. The first two functions only determine the values of swap for estimation purposes while the last two does the actual conversion.
+To swap from Token1 to Token2 we will implement four functions - `getSwapToken1EstimateGivenToken1`, `getSwapToken1EstimateGivenToken2`, `swapToken1GivenToken1` & `swapToken1GivenToken2`. The first two functions only determine the values of swap for estimation purposes while the last two do the actual conversion.
 
 `getSwapToken1EstimateGivenToken1` returns the amount of token2 that the user will get when depositing a given amount of token1. The amount of token2 is obtained from the equation **K = totalToken1 * totalToken2** and **K = (totalToken1 + delta * amountToken1) * (totalToken2 - amountToken2)** where **delta** is **(1000 - fees)/1000**. Therefore **delta \* amountToken1** is the adjusted token1Amount for which the resultant amountToken2 is calculated and rest of token1Amount goes into the pool as trading fees. We get the value **amountToken2** from solving the above equation.
 
@@ -445,7 +445,7 @@ Congrats!! on completing the implementation of the smart contract. The complete 
 
 ## Part 10. Unit Testing
 
-Now let's write some unit tests to make sure our program is working as intended. Module(s) marked with `#[cfg(test)]` attribute tells rust to run the following code when `cargo test` command is executed. Test functions are marked with attribute `#[ink::test]` when we want ink! to inject enviornment variables like `caller` during the contract invokation.
+Now let's write some unit tests to make sure our program is working as intended. Module(s) marked with `#[cfg(test)]` attribute tells rust to run the following code when `cargo test` command is executed. Test functions are marked with attribute `#[ink::test]` when we want ink! to inject environment variables like `caller` during the contract invocation.
 
 ```rust
 #[cfg(test)]
@@ -533,13 +533,13 @@ From your ink! project directory run the following command in the terminal to ru
 cargo +nightly contract test
 ```
 
-Next we will learn how to deploy the contract on a public testnet in the next section.
+Next, we will learn how to deploy the contract on a public testnet in the next section.
 
 # Deploying the smart contract
 
 We will deploy our ink! smart contract on Jupiter A1 testnet of Patract ([More info](https://docs.patract.io/en/jupiter/network)). If you wish to deploy on a local node or some other testnet instead, change the `blockchainUrl` variable in [src/constants.js](src/constants.js) file to point to their respective endpoint. 
 
-First we need to build our ink! project to obtain the necessary artifacts. From your ink! project directory run the following command in the terminal:
+First, we need to build our ink! project to obtain the necessary artifacts. From your ink! project directory run the following command in the terminal:
 
 ```text
 cargo +nightly contract build --release
@@ -547,33 +547,33 @@ cargo +nightly contract build --release
 
 This will generate the artifacts at `./target/ink`. We will use the `amm.wasm` and `metadata.json` (*It is the ABI of our contract and it will be needed when we integrate it with the frontend of our dApp*) files to deploy our smart contract.
 
-Next we need to fund our address to interact with the network. Go to the [faucet](https://patrastore.io/#/jupiter-a1/system/accounts) to get some testnet tokens. 
+Next, we need to fund our address to interact with the network. Go to the [faucet](https://patrastore.io/#/jupiter-a1/system/accounts) to get some testnet tokens. 
 
-Now visit [https://polkadot.js.org/apps](https://polkadot.js.org/apps) and switch to the Jupiter testnet. You can do this by clicking on the chain logo available on top-left of navbar where you will see a list of available networks. Move to the *"TEST NETWORKS"* section and search for a network called **Jupiter**. Select it and scroll back to the top and click on *Switch*.
+Now visit [https://polkadot.js.org/apps](https://polkadot.js.org/apps) and switch to the Jupiter testnet. You can do this by clicking on the chain logo available on the top-left of the navbar where you will see a list of available networks. Move to the *"TEST NETWORKS"* section and search for a network called **Jupiter**. Select it and scroll back to the top and click on *Switch*.
 
 ![Switch Network](public/polkadot-js.png)
 
-After switching the network, Click on *Contracts* option under *Developer* tab from the navbar. There click on *Upload & Deploy Code* and select the account through which you wish to deploy and in the field - *"json for either ABI or .contract bundle"* upload the `metadata.json` file. Next a new field - *"compiled contract WASM"* will emerge where you need to upload your wasm file i.e. `amm.wasm` in our case. It will look something like this - 
+After switching the network, Click on the *Contracts* option under the *Developer* tab from the navbar. There click on *Upload & Deploy Code* and select the account through which you wish to deploy and in the field - *"json for either ABI or .contract bundle"* upload the `metadata.json` file. Next a new field - *"compiled contract WASM"* will emerge where you need to upload your wasm file i.e. `amm.wasm` in our case. It will look something like this - 
 
 ![Deploy step 1](public/deploy1.png)
 
-Now click on *Next*. As we have just one constructor in our contract, It will be chosen by default otherwise a dropdown option would have been present to select from multiple constructors. As our constructor `new()` accepts one parameter called `fees`. We need to set the *fees* field with some positive number. 
+Now click on *Next*. As we have just one constructor in our contract, It will be chosen by default otherwise a dropdown option would have been present to select from multiple constructors. As our constructor `new()` accepts one parameter called `fees`. We need to set the *fees* field with a positive number. 
 
 {% hint style="info" %}  
-Note down that the default unit is set to *DOT* which multiplies the input by a factor of 10^4. So if we wish to pass value 10 (which correspondes to 1% trading fee, 10/1000 fraction, in our contract) as *fees* parameter then we need to write 0.0001 DOT.  
+Note down that the default unit is set to *DOT* which multiplies the input by a factor of 10^4. So if we wish to pass a value say 10 (which corresponds to 1% trading fee, 10/1000 fraction, in our contract) then we need to write 0.0001 DOT.  
 {% endhint %}
 
 Set *endowment* to 1 DOT which transfers 1 DOT to the contract for storage rent. Finally set *max gas allowed (M)* to 200000. It will look something like this - 
 
 ![Deploy step 2](public/deploy2.png)
 
-Click on *Deploy* followed by *Sign and Submit*. Wait for the Tx to be mined and after few seconds you can see the updated contract page with the list of your deployed contracts. Click on the name of your contract to see the contract address and note it down as it will be needed when integrating with the frontend.
+Click on *Deploy* followed by *Sign and Submit*. Wait for the Tx to be mined and after a few seconds, you can see the updated contract page with the list of your deployed contracts. Click on the name of your contract to see the contract address and note it down as it will be needed when integrating with the frontend.
 
 ![Find contract address](public/contract-address.png)
 
 # How to interact with polkadot.{js}
 
-In this section we will see how to interact with our smart contract using polkadot.{js}. Install the required packages 
+In this section, we will see how to interact with our smart contract using polkadot.{js}. Install the required packages 
 
 ```text
 npm install @polkadot/api @polkadot/api-contract @polkadot/extension-dapp
@@ -637,7 +637,7 @@ const faucet = async (amountKAR, amountKOTHI) => {
 }
 ```
 
-In the above javascript code we have demostrated how to make a query and transaction to our AMM smart contract. Now let's understand each line of the above code.
+In the above javascript code, we have demonstrated how to make a query and transaction to our AMM smart contract. Now let's understand each line of the above code.
 
 ```javascript
 // Creates a provider
@@ -650,9 +650,9 @@ const api = await ApiPromise.create({ provider: wsProvider });
 const contract = new ContractPromise(api, CONTRACT_ABI, CONTRACT_ADDRESS);
 ```
 
-To interact with the smart contract we need to create an instance of the contract. For that we first need to make a API instance and any API requires a provider and take a look at the above snippet we create one with **WsProvider**. Next API creation is done via the **ApiPromise.create** interface. If a provider is not passed to the **ApiPromise.create** it will construct a default WsProvider instance to connect to `ws://127.0.0.1:9944`. 
+To interact with the smart contract we need to create an instance of the contract. For that, we first need to make an API instance and any API requires a provider and take a look at the above snippet we create one with **WsProvider**. Next, API creation is done via the **ApiPromise.create** interface. If a provider is not passed to the **ApiPromise.create** it will construct a default WsProvider instance to connect to `ws://127.0.0.1:9944`. 
 
-Finally we will interact with the deployed contract by making a new instance with the help of **ContractPromise** interface, it allows to manage on-chain contracts, making read calls and executing transactions on contracts.
+Finally, we will interact with the deployed contract by making a new instance with the help of the **ContractPromise** interface, it allows us to manage on-chain contracts, make read calls, and execute transactions on contracts.
 
 ```javascript
 // Retrieves the list of all injected extensions/providers
@@ -665,7 +665,7 @@ const allAccounts = await web3Accounts();
 const selectedAccount = allAccounts[0];
 ```
 
-Now we need to select an account to work with. We can get the list of all injected extensions with **web3Enable**. To get the list of all available accounts we use the help of **web3Accounts**. In the above snippet we store the first account in a variable **selectedAccount**. 
+Now we need to select an account to work with. We can get the list of all injected extensions with **web3Enable**. To get the list of all available accounts we use the help of **web3Accounts**. In the above snippet, we store the first account in a variable **selectedAccount**. 
  
 ```javascript
 // Retrieves the signer interface from this account
@@ -689,7 +689,7 @@ const getAccountHoldings = async () => {
 };
 ```
 
-We have created a function **getAccountHoldings**, it makes a query to **getMyHoldings** method of our smart contract. We pass the account address as first parameter, 2nd parameter is an object with two keys, **value** only useful on isPayable messages, **gasLimit** sets the maximum gas our query can take. We have set **gasLimit** to **-1**, which indicates the limit is unbounded and can use maximum available.
+We have created a function **getAccountHoldings**, which makes a query to the **getMyHoldings** method of our smart contract. We pass the account address as the first parameter, 2nd parameter is an object with two keys, **value** only useful on isPayable messages, **gasLimit** sets the maximum gas our query can take. We have set **gasLimit** to **-1**, which indicates the limit is unbounded and can use the maximum available.
 
 ```javascript
 // Fund the account with given amount (makes a transaction)
@@ -708,7 +708,7 @@ const faucet = async (amountKAR, amountKOTHI) => {
 }
 ```
 
-The function faucet, makes a transaction to **faucet** method of our smart contract. We pass the object with **value** and **gasLimit** keys as first parameter and then we pass the other arguments required for the **faucet** method, the **amountKAR** and **amountKOTHI**. We then sign and send the transaction using **signAndSend** method. To this method we pass the account address as the first parameter, an object containing the signer as the second parameter, and a callback function which calls the **getAccountHoldings** function when the transaction is Finalized.  
+The function faucet makes a transaction to the **faucet** method of our smart contract. We pass the object with **value** and **gasLimit** keys as the first parameter and then we pass the other arguments required for the **faucet** method, the **amountKAR** and **amountKOTHI**. We then sign and send the transaction using the **signAndSend** method. To this method we pass the account address as the first parameter, an object containing the signer as the second parameter, and a callback function that calls the **getAccountHoldings** function when the transaction is Finalized.  
 
 # Creating a frontend in React
 
@@ -720,7 +720,7 @@ Open a terminal and navigate to the directory where we will create the applicati
 cd /path/to/directory
 ```
 
-Now clone the github repository, move into the newly `polkadot-amm` directory and install all the dependencies.
+Now clone the GitHub repository, move into the newly `polkadot-amm` directory and install all the dependencies.
 
 ```text
 git clone https://github.com/realnimish/polkadot-amm.git
@@ -743,7 +743,7 @@ Takes amount of one token (KAR or KOTHI) fills in the estimated amount of the ot
 Helps swap a token to another. It takes the amount of token in input field *From* and estimates the amount of token in input field *To* and vise versa, and also helps set the slippage tolerance while swapping.
 
 * **WithdrawComponent** :-
-Helps withdraw the share one has. Also enables to withdraw to his maximum limit.
+Helps withdraw the share one has. Also enables them to withdraw to his maximum limit.
 
 * **Account** :-
 Shows the pool detail and the account details. It enables to switch between accounts in the application.
