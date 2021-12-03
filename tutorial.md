@@ -773,6 +773,24 @@ Congratulations! We have successfully developed a working AMM model where users 
 
 # Troubleshooting
 
+**Account not showing up**
+
+Make sure that you have added the account on the polkadot{.js} extension and the account visibility is set to either "Allow use on any chain" or "Jupiter A1". You can find this by opening the polkadot{.js} extension and clicking on the hamburger menu of the corresponding account. 
+
+![chain visibility](public/chain-visibility.png)
+
+**Ink! project is not building**
+
+The ink! project is in active development because of which our current implementation might become incompatible with future releases. In that case, you can try to modify the contract or shift to ink v3.0.0-rc7.
+
+**Invalid JSON ABI structure supplied, expected a recent metadata version**
+
+Try building the ink! contract using the latest version. If the contract doesn't build on the latest version try deploying on a local node instead.
+
+**ExtrinsicFailed Error while deploying the contract**
+
+Make sure that you are providing a sufficient gas amount for the transaction and have built the contract with `--release` flag as mentioned in the deployment section.
+
 # About the Author(s)  
 
 The tutorial was created by [Sayan Kar](https://github.com/SayanKar) and [Nimish Agrawal](https://github.com/realnimish). You can reach out to them on [Figment Forum](https://community.figment.io/u/nimishagrawal100.in/) for any query regarding the tutorial.
