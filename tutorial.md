@@ -537,7 +537,7 @@ Next we will learn how to deploy the contract on a public testnet in the next se
 
 # Deploying the smart contract
 
-We will deploy our ink! smart contract on Jupiter A1 testnet of Patract ([More info](https://docs.patract.io/en/jupiter/network)). If you wish to deploy on a local node or some other testnet instead, Change the `blockchainUrl` variable in [src/constants.js](src/constants.js) file to point to their endpoint. 
+We will deploy our ink! smart contract on Jupiter A1 testnet of Patract ([More info](https://docs.patract.io/en/jupiter/network)). If you wish to deploy on a local node or some other testnet instead, change the `blockchainUrl` variable in [src/constants.js](src/constants.js) file to point to their respective endpoint. 
 
 First we need to build our ink! project to obtain the necessary artifacts. From your ink! project directory run the following command in the terminal:
 
@@ -545,10 +545,31 @@ First we need to build our ink! project to obtain the necessary artifacts. From 
 cargo +nightly contract build --release
 ```
 
-This will generate the artifacts at `./target/ink`. We will use the `amm.wasm` and `metadata.json` (*It is the ABI of our contract and it will be needed when we integrate the frontend of our dApp*) files to deploy our smart contract.
+This will generate the artifacts at `./target/ink`. We will use the `amm.wasm` and `metadata.json` (*It is the ABI of our contract and it will be needed when we integrate it with the frontend of our dApp*) files to deploy our smart contract.
 
-Next we need to fund our address to interact with the network. Go to the [faucet](https://patrastore.io/#/jupiter-a1/system/accounts) to get some testnet tokens.
+Next we need to fund our address to interact with the network. Go to the [faucet](https://patrastore.io/#/jupiter-a1/system/accounts) to get some testnet tokens. 
 
+Now visit [https://polkadot.js.org/apps](https://polkadot.js.org/apps) and switch to the Jupiter testnet. You can do this by clicking on the chain logo available on top-left of navbar where you will see a list of available networks. Move to the *"TEST NETWORKS"* section and search for a network called **Jupiter**. Select it and scroll back to the top and click on *Switch*.
+
+![Switch Network](public/polkadot-js.png)
+
+After switching the network, Click on *Contracts* option under *Developer* tab from the navbar. There click on *Upload & Deploy Code* and select the account through which you wish to deploy and in the field - *"json for either ABI or .contract bundle"* upload the `metadata.json` file. Next a new field - *"compiled contract WASM"* will emerge where you need to upload your wasm file i.e. `amm.wasm` in our case. It will look something like this - 
+
+![Deploy step 1](public/deploy1.png)
+
+Now click on *Next*. As we have just one constructor in our contract, It will be chosen by default otherwise a dropdown option would have been present to select from multiple constructors. As our constructor `new()` accepts one parameter called `fees`. We need to set the *fees* field with some positive number. 
+
+{% hint style="info" %}  
+Note down that the default unit is set to *DOT* which multiplies the input by a factor of 10^4. So if we wish to pass value 10 (which correspondes to 1% trading fee, 10/1000 fraction, in our contract) as *fees* parameter then we need to write 0.0001 DOT.  
+{% endhint %}
+
+Set *endowment* to 1 DOT which transfers 1 DOT to the contract for storage rent. Finally set *max gas allowed (M)* to 200000. It will look something like this - 
+
+![Deploy step 2](public/deploy2.png)
+
+Click on *Deploy* followed by *Sign and Submit*. Wait for the Tx to be mined and after few seconds you can see the updated contract page with the list of your deployed contracts. Click on the name of your contract to see the contract address and note it down as it will be needed when integrating with the frontend.
+
+![Find contract address](public/contract-address.png)
 
 # How to interact with polkadot.{js}
 
