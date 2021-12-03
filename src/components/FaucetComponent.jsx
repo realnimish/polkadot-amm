@@ -36,7 +36,6 @@ export default function FaucetComponent(props) {
           props.activeAccount.address,
           { signer: props.signer },
           async (res) => {
-            console.log("res: ", res);
             if (res.status.isFinalized) {
               await props.getHoldings();
               alert("Tx successful");

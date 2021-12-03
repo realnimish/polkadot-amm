@@ -70,7 +70,7 @@ export default function AccountComponent(props) {
       {showTab === "AccountDetail" && (
         <>
           <div className="tabHeader">Account</div>
-          {props?.activeAccount?.address ? (
+          {props?.activeAccount?.address && (
             <>
               <div className="accountDetail">
                 <div className="accountdetailIcon">
@@ -153,21 +153,22 @@ export default function AccountComponent(props) {
                 </div>
               </div>
             </>
-          ) : (
-            <div className="accountConnectBtn" onClick={() => props.connect()}>
-              Connect your wallet
-            </div>
           )}
         </>
       )}
 
-      {showTab === "SelectAccount" && (
-        <>
-          <div className="tabHeader">Select Account</div>
-          <div className="miniText"> Select an account to work with</div>
-          {accountList && renderAccounts()}
-        </>
-      )}
+      {showTab === "SelectAccount" &&
+        (props.contract === null ? (
+          <div className="accountConnectBtn" onClick={() => props.connect()}>
+            Connect your wallet
+          </div>
+        ) : (
+          <>
+            <div className="tabHeader">Select Account</div>
+            <div className="miniText"> Select an account to work with</div>
+            {accountList && renderAccounts()}
+          </>
+        ))}
     </div>
   );
 }

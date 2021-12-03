@@ -58,7 +58,7 @@ export default function ContainerComponent(props) {
           setTotalKAR(res[0].replace(/,/g, "") / PRECISION);
           setTotalKOTHI(res[1].replace(/,/g, "") / PRECISION);
           setTotalShare(res[2].replace(/,/g, "") / PRECISION);
-          setTradingFees(res[0].replace(/,/g, "") / 10);
+          setTradingFees(res[3].replace(/,/g, "") / 10);
         })
         .catch((err) => {
           console.log("Couldn't fetch pool details :-", err);
