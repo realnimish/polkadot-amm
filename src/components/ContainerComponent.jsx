@@ -169,13 +169,11 @@ export default function ContainerComponent(props) {
         )}
         {activeTab === "Settings" && (
           <SettingComponent 
-            blockchainUrl={props.blockchainUrl}
-            contractAddress={props.contractAddress}
-            connect={() => props.connect()}
+            setNetwork={(val) => props.setNetwork(val)}
+            network={props.network}
+            connect={(url, addrs) => props.connect(url, addrs)}
             activeAccount={props.activeAccount}
             setActiveTab={(val) => props.setActiveTab(val)}
-            setInputBlockchainUrl={(val) => props.setInputBlockchainUrl(val)}
-            setInputContractAddress={(val) => props.setInputContractAddress(val)}
           />
         )}
       </div>

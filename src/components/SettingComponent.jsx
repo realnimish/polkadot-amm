@@ -3,8 +3,8 @@ import "../styles.css";
 import BoxTemplate from "./BoxTemplate";
 
 export default function SettingComponent(props) {
-  const [url, setUrl] = useState(props.blockchainUrl);
-  const [address, setAddress] = useState(props.contractAddress);
+  const [url, setUrl] = useState(props?.network?.url);
+  const [address, setAddress] = useState(props?.network?.address);
 
   const onChangeUrl = (e) => {
     setUrl(e.target.value);
@@ -16,15 +16,9 @@ export default function SettingComponent(props) {
 
   
   async function onClickChange() {
-    props.setInputBlockchainUrl(url);
-    props.setInputContractAddress(address);
-
-    if(!props?.activeAccount?.address){
-        props.setActiveTab("Account");
-    } else {
-        setTimeout(async () => await props.connect(), 3000);
-    }
-
+    if(url.length === 0 || address.length === 0)
+        return;
+    await props.connect(url, address);
   }
 
   return (
