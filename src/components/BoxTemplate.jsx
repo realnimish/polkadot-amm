@@ -3,7 +3,7 @@ import { RE } from "../constants";
 
 export default function BoxTemplate(props) {
   const onInputChange = (e) => {
-    if (e.target.value === "" || RE.test(e.target.value)) {
+    if (e.target.value === "" || RE.test(e.target.value) || props.leaveRegex) {
       props.onChange(e);
     }
   };
@@ -13,7 +13,7 @@ export default function BoxTemplate(props) {
         <div>
           <p className="leftHeader"> {props.leftHeader} </p>
           <input
-            className="textField"
+            className={props.leaveRegex ? "settingsTextField" : "textField"}
             value={props.value}
             onChange={(e) => onInputChange(e)}
             placeholder={"Enter amount"}

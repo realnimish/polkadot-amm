@@ -14,6 +14,8 @@ export default function App() {
   const [activeAccount, setActiveAccount] = useState();
   const [signer, setSigner] = useState(null);
   const [selectedTab, setSelectedTab] = useState("Swap");
+  const [inputBlockchainUrl, setInputBlockchainUrl] = useState(null);
+  const [inputContractAddress, setInputContractAddress] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -29,9 +31,9 @@ export default function App() {
   async function connect() {
     try {
       console.log("----- Connect called -----");
-      const wsProvider = new WsProvider(blockchainUrl);
+      const wsProvider = new WsProvider( inputBlockchainUrl ? inputBlockchainUrl : blockchainUrl);
       const api = await ApiPromise.create({ provider: wsProvider });
-      const contract = new ContractPromise(api, abi, CONTRACT_ADDRESS);
+      const contract = new ContractPromise(api, abi, inputContractAddress ? inputContractAddress : CONTRACT_ADDRESS);
       setMyContract(contract);
       setSelectedTab("Account");
     } catch (err) {
@@ -72,6 +74,10 @@ export default function App() {
         signer={signer}
         setActiveAccount={(val) => setActiveAccount(val)}
         setActiveTab={(val) => setSelectedTab(val)}
+        setInputBlockchainUrl={(val) => setInputBlockchainUrl(val)}
+        setInputContractAddress={(val) => setInputContractAddress(val)}
+        blockchainUrl={inputBlockchainUrl ? inputBlockchainUrl : blockchainUrl}
+        contractAddress={inputContractAddress ? inputContractAddress : CONTRACT_ADDRESS}
       />
     </div>
   );

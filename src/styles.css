@@ -178,6 +178,17 @@ body,
   font-weight: 800;
   color: var(--dark);
 }
+
+.settingsTextField{
+  width: 190%;
+  height: 30px;
+  font-size: 12px;
+  background-color: var(--background-primary);
+  border: 0px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
 .coinWrapper {
   padding: 4px 8px 4px 8px;
   border-radius: 15px;
