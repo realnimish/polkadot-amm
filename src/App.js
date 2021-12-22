@@ -14,6 +14,7 @@ export default function App() {
   const [activeAccount, setActiveAccount] = useState();
   const [signer, setSigner] = useState(null);
   const [selectedTab, setSelectedTab] = useState("Swap");
+  const [network, setNetwork] = useState({url: blockchainUrl, address: CONTRACT_ADDRESS});
 
   useEffect(() => {
     (async () => {
@@ -26,14 +27,19 @@ export default function App() {
     })();
   }, [activeAccount]);
 
-  async function connect() {
+  async function connect(url = network.url, address = network.address) {
     try {
-      console.log("----- Connect called -----");
-      const wsProvider = new WsProvider(blockchainUrl);
+      console.log("----- Connect called -----", url, address);
+      const wsProvider = new WsProvider( url );
+      console.log("Provider", wsProvider);
       const api = await ApiPromise.create({ provider: wsProvider });
-      const contract = new ContractPromise(api, abi, CONTRACT_ADDRESS);
+      const contract = new ContractPromise(api, abi, address);
       setMyContract(contract);
       setSelectedTab("Account");
+      setNetwork({
+        "url": url,
+        "address": address
+      })
     } catch (err) {
       console.log("Couldn't connect to wallet :- ", err);
     }
@@ -67,11 +73,13 @@ export default function App() {
       <ContainerComponent
         contract={myContract}
         selectedTab={selectedTab}
-        connect={() => connect()}
+        connect={(url, addrs) => connect(url, addrs)}
         activeAccount={activeAccount}
         signer={signer}
         setActiveAccount={(val) => setActiveAccount(val)}
         setActiveTab={(val) => setSelectedTab(val)}
+        setNetwork={(val) => setNetwork(val)}
+        network={network}
       />
     </div>
   );

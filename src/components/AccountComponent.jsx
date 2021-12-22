@@ -9,7 +9,7 @@ export default function AccountComponent(props) {
     props.activeAccount ? "AccountDetail" : "SelectAccount"
   );
   const [accountList, setAccountList] = useState([]);
-
+  console.log("Contract", props.contract);
   const onChangeShowTab = async (val) => {
     setShowTab(val);
     if (val === "SelectAccount") {
