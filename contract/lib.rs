@@ -2,13 +2,12 @@
 #![allow(non_snake_case)]
 
 use ink_lang as ink;
+
 const PRECISION: u128 = 1_000_000; // Precision of 6 digits
 
 #[ink::contract]
 mod amm {
     use ink_storage::{traits::SpreadAllocate, Mapping};
-
-    // Part 1. Define Error enum
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -31,8 +30,6 @@ mod amm {
         SlippageExceeded,
     }
 
-    // Part 2. Define storage struct
-
     #[derive(Default, SpreadAllocate)]
     #[ink(storage)]
     pub struct Amm {
@@ -44,8 +41,6 @@ mod amm {
         token2Balance: Mapping<AccountId, Balance>, // Stores the token2 balance of each user
         fees: Balance,        // Percent of trading fees charged on trade
     }
-
-    // Part 3. Helper functions
 
     #[ink(impl)]
     impl Amm {
@@ -80,8 +75,6 @@ mod amm {
     }
 
     impl Amm {
-        // Part 4. Constructor
-
         /// Constructs a new AMM instance
         /// @param _fees: valid interval -> [0,1000)
         #[ink(constructor)]
@@ -97,8 +90,6 @@ mod amm {
             }
         }
 
-        // Part 5. Faucet
-
         /// Sends free token(s) to the invoker
         #[ink(message)]
         pub fn faucet(&mut self, _amountToken1: Balance, _amountToken2: Balance) {
@@ -109,8 +100,6 @@ mod amm {
             self.token1Balance.insert(caller, &(token1 + _amountToken1));
             self.token2Balance.insert(caller, &(token2 + _amountToken2));
         }
-
-        // Part 6. Read current state
 
         /// Returns the balance of the user
         #[ink(message)]
@@ -132,8 +121,6 @@ mod amm {
                 self.fees,
             )
         }
-
-        // Part 7. Provide
 
         /// Adding new liquidity in the pool
         /// Returns the amount of share issued for locking given assets
@@ -203,8 +190,6 @@ mod amm {
             Ok(self.totalToken2 * _amountToken1 / self.totalToken1)
         }
 
-        // Part 8. Withdraw
-
         /// Returns the estimate of Token1 & Token2 that will be released on burning given _share
         #[ink(message)]
         pub fn getWithdrawEstimate(&self, _share: Balance) -> Result<(Balance, Balance), Error> {
@@ -246,8 +231,6 @@ mod amm {
             self.token2Balance.insert(caller, &newToken2Balance);
             Ok((amountToken1, amountToken2))
         }
-
-        // Part 9. Swap
 
         /// Returns the amount of Token2 that the user will get when swapping a given amount of Token1 for Token2
         #[ink(message)]
@@ -320,8 +303,6 @@ mod amm {
             Ok(amountToken2)
         }
     }
-
-    // Part 10. Unit Testing
 
     #[cfg(test)]
     mod tests {
